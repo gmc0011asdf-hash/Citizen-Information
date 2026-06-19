@@ -190,35 +190,26 @@ with st.sidebar:
     )
 
 # ─── شريط العنوان + الساعة أعلى المحتوى ───
-import streamlit.components.v1 as components
-components.html("""
-<div style="background:#fff;border-bottom:2px solid #d1d5db;padding:8px 20px;display:flex;
-    align-items:center;justify-content:space-between;border-radius:0 0 10px 10px;
-    font-family:'Cairo',sans-serif;direction:rtl;margin-bottom:4px">
-    <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:1.2rem">🏛️</span>
-        <span style="font-size:1rem;font-weight:800;color:#0a3d62">المعلومات المدنية للمواطنين</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:16px;direction:ltr">
-        <span id="topDate" style="font-size:0.82rem;color:#4b5563"></span>
-        <span id="topTime" style="font-size:1.1rem;font-weight:700;color:#b8860b;font-variant-numeric:tabular-nums">--:--:--</span>
-    </div>
-</div>
-<script>
-function updateTopClock(){
-    var now=new Date(),utc=now.getTime()+now.getTimezoneOffset()*60000;
-    var bd=new Date(utc+3*3600000),h=bd.getHours(),m=bd.getMinutes(),s=bd.getSeconds();
-    var p=function(n){return String(n).padStart(2,'0')};
-    var el=document.getElementById('topTime');
-    if(el)el.textContent=p(h)+':'+p(m)+':'+p(s);
-    var days=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-    var months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-    var dEl=document.getElementById('topDate');
-    if(dEl)dEl.textContent=days[bd.getDay()]+' '+bd.getDate()+' '+months[bd.getMonth()]+' '+bd.getFullYear();
-}
-setInterval(updateTopClock,1000);updateTopClock();
-</script>
-""", height=52)
+from datetime import datetime, timezone, timedelta
+_baghdad = datetime.now(timezone(timedelta(hours=3)))
+_time_str = _baghdad.strftime("%H:%M:%S")
+_days_ar = ['الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد']
+_months_ar = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+              'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']
+_date_str = f"{_days_ar[_baghdad.weekday()]} {_baghdad.day} {_months_ar[_baghdad.month - 1]} {_baghdad.year}"
+st.markdown(
+    f"<div class='topbar-main'>"
+    f"<div style='display:flex;align-items:center;gap:10px'>"
+    f"<span style='font-size:1.3rem'>🏛️</span>"
+    f"<span style='font-size:1.05rem;font-weight:800;color:#0a3d62'>المعلومات المدنية للمواطنين</span>"
+    f"</div>"
+    f"<div style='display:flex;align-items:center;gap:14px;direction:ltr'>"
+    f"<span style='font-size:0.85rem;color:#4b5563'>{_date_str}</span>"
+    f"<span style='font-size:1.15rem;font-weight:700;color:#b8860b;font-variant-numeric:tabular-nums'>{_time_str}</span>"
+    f"</div>"
+    f"</div>",
+    unsafe_allow_html=True,
+)
 
 
 def goto(page: str, selected_id: int = None):
@@ -762,14 +753,15 @@ def page_stats():
     s = db.get_stats()
 
     cols = st.columns(4)
-    for col, (lbl, val) in zip(cols, [
-        ("إجمالي السجلات", s['total']),
-        ("النشطة", s['active']),
-        ("المحذوفة", s['deleted']),
-        ("بأسماء كاملة", s['with_name']),
-    ]):
+    stats_row1 = [
+        ("إجمالي السجلات", s['total'], ""),
+        ("النشطة", s['active'], ""),
+        ("المحذوفات", s['deleted'], "danger"),
+        ("بأسماء كاملة", s['with_name'], ""),
+    ]
+    for col, (lbl, val, cls) in zip(cols, stats_row1):
         col.markdown(
-            f"<div class='stat-card'>"
+            f"<div class='stat-card {cls}'>"
             f"<div class='stat-num'>{val:,}</div>"
             f"<div class='stat-lbl'>{lbl}</div></div>",
             unsafe_allow_html=True,
@@ -778,13 +770,14 @@ def page_stats():
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     cols2 = st.columns(3)
-    for col, (lbl, val) in zip(cols2, [
-        ("المختارون", s['mukhtars']),
-        ("الأحياء", s['neighborhoods']),
-        ("المهن الفريدة", s['mihnas']),
-    ]):
+    stats_row2 = [
+        ("المختارون", s['mukhtars'], "gold"),
+        ("الأحياء", s['neighborhoods'], "gold"),
+        ("المهن الفريدة", s['mihnas'], "gold"),
+    ]
+    for col, (lbl, val, cls) in zip(cols2, stats_row2):
         col.markdown(
-            f"<div class='stat-card gold'>"
+            f"<div class='stat-card {cls}'>"
             f"<div class='stat-num'>{val:,}</div>"
             f"<div class='stat-lbl'>{lbl}</div></div>",
             unsafe_allow_html=True,
