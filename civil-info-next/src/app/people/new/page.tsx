@@ -8,6 +8,7 @@ import {
   getRegions,
   getMukhtars,
   getMaritalStatuses,
+  getFamilyRelations,
   getHayasForRegion,
 } from "@/lib/api";
 import type { Person, Mukhtar } from "@/lib/types";
@@ -20,6 +21,7 @@ export default function NewPersonPage() {
   const [regions, setRegions] = useState<string[]>([]);
   const [mukhtars, setMukhtars] = useState<Mukhtar[]>([]);
   const [maritalStatuses, setMaritalStatuses] = useState<string[]>([]);
+  const [familyRelations, setFamilyRelations] = useState<string[]>([]);
   const [hayas, setHayas] = useState<string[]>([]);
 
   useEffect(() => {
@@ -31,6 +33,9 @@ export default function NewPersonPage() {
       .catch(() => {});
     getMaritalStatuses()
       .then(setMaritalStatuses)
+      .catch(() => {});
+    getFamilyRelations()
+      .then(setFamilyRelations)
       .catch(() => {});
   }, []);
 
@@ -211,11 +216,18 @@ export default function NewPersonPage() {
             </div>
             <div className="form-group">
               <label>الصلة</label>
-              <input
+              <select
                 className="form-input"
                 value={form.الصلة || ""}
                 onChange={(e) => updateField("الصلة", e.target.value)}
-              />
+              >
+                <option value="">اختر</option>
+                {familyRelations.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

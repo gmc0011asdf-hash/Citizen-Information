@@ -16,6 +16,26 @@ export interface Person {
   deleted: number;
   family_id: number | null;
   mukhtar_name?: string;
+  matched_by_search?: boolean;
+  included_as_family?: boolean;
+}
+
+export interface Region {
+  id: number;
+  name: string;
+  created_at?: string;
+}
+
+export interface FamilySearchResult {
+  family_id: number;
+  head_name: string;
+  members_count: number;
+  region: string;
+  hay: string;
+}
+
+export interface PersonWithFamily extends Person {
+  family_members: Person[];
 }
 
 export interface Mukhtar {

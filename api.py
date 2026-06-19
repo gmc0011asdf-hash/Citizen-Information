@@ -101,6 +101,7 @@ class PersonReq(BaseModel):
     mukhtar_id: Optional[int] = None
     marital_status: str = ""
     sila: str = ""
+    family_id: Optional[int] = None
 
 @app.get("/api/persons")
 def list_persons(
@@ -112,11 +113,12 @@ def list_persons(
     deleted_filter: str = "active",
     limit: int = 50,
     offset: int = 0,
+    include_family: bool = False,
 ):
     rows, total = db.get_persons(
         search=search, region=region, haya=haya, mihna=mihna,
         mukhtar_id=mukhtar_id, deleted_filter=deleted_filter,
-        limit=limit, offset=offset,
+        limit=limit, offset=offset, include_family=include_family,
     )
     return {"rows": rows, "total": total}
 
@@ -154,6 +156,7 @@ def add_person(req: PersonReq):
         المحل=req.mahal, الهاتف=req.phone, الشيت="يدوي",
         المنطقة=req.region, الحي=req.hay, mukhtar_id=req.mukhtar_id,
         الحالة_الزوجية=req.marital_status, الصلة=req.sila,
+        family_id=req.family_id,
     )
     if req.hay and req.region:
         db.add_neighborhood(req.hay, req.region)
@@ -166,6 +169,21 @@ def delete_person(pid: int):
 @app.post("/api/persons/{pid}/restore")
 def restore_person(pid: int):
     return {"ok": db.restore(pid)}
+
+@app.get("/api/persons/{pid}/family")
+def person_family(pid: int):
+    result = db.get_person_with_family(pid)
+    if not result:
+        raise HTTPException(404)
+    return result
+
+@app.delete("/api/persons/{pid}/permanent")
+def permanent_delete(pid: int):
+    try:
+        ok = db.hard_delete_person(pid)
+        return {"ok": ok}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
 @app.get("/api/persons/export/excel")
 def export_excel(
@@ -186,6 +204,7 @@ def export_excel(
 class MukhtarReq(BaseModel):
     name: str
     phone: str = ""
+    region: str = ""
     neighborhood_ids: list[int] = []
 
 @app.get("/api/mukhtars")
@@ -208,6 +227,13 @@ def create_mukhtar(req: MukhtarReq):
     dup = db.find_duplicate_mukhtar(req.name)
     if dup:
         raise HTTPException(400, "مختار مكرر")
+    # Validate all neighborhood_ids belong to same region
+    if req.neighborhood_ids and req.region:
+        nbs = db.get_neighborhoods()
+        nb_map = {n['id']: n['المنطقة'] for n in nbs}
+        for nid in req.neighborhood_ids:
+            if nid in nb_map and nb_map[nid] != req.region:
+                raise HTTPException(400, "جميع الأحياء يجب أن تكون في نفس المنطقة")
     mid = db.add_mukhtar(req.name, req.phone)
     if req.neighborhood_ids:
         db.set_mukhtar_neighborhoods(mid, req.neighborhood_ids)
@@ -218,6 +244,13 @@ def edit_mukhtar(mid: int, req: MukhtarReq):
     dup = db.find_duplicate_mukhtar(req.name, exclude_id=mid)
     if dup:
         raise HTTPException(400, "مختار مكرر")
+    # Validate all neighborhood_ids belong to same region
+    if req.neighborhood_ids and req.region:
+        nbs = db.get_neighborhoods()
+        nb_map = {n['id']: n['المنطقة'] for n in nbs}
+        for nid in req.neighborhood_ids:
+            if nid in nb_map and nb_map[nid] != req.region:
+                raise HTTPException(400, "جميع الأحياء يجب أن تكون في نفس المنطقة")
     db.update_mukhtar(mid, req.name, req.phone)
     db.set_mukhtar_neighborhoods(mid, req.neighborhood_ids)
     return {"ok": True}
@@ -253,7 +286,20 @@ def remove_neighborhood(nid: int):
 
 @app.get("/api/regions")
 def list_regions():
-    return db.MAIN_REGIONS
+    return db.get_regions_from_db()
+
+@app.post("/api/regions")
+def create_region(name: str):
+    rid = db.add_region(name)
+    if not rid:
+        raise HTTPException(400, "المنطقة موجودة مسبقاً أو الاسم فارغ")
+    return {"id": rid}
+
+@app.delete("/api/regions/{region_id}")
+def remove_region(region_id: int):
+    if not db.delete_region(region_id):
+        raise HTTPException(400, "لا يمكن حذف المنطقة - مرتبطة ببيانات")
+    return {"ok": True}
 
 @app.get("/api/hayas/{region}")
 def hayas_for_region(region: str):
@@ -271,13 +317,21 @@ def create_family(pid: int):
     fid = db.create_family(pid)
     return {"family_id": fid}
 
+class FamilyLinkReq(BaseModel):
+    family_id: int
+    relation: str = "أخرى"
+
 @app.post("/api/family/link/{pid}")
-def link_family(pid: int, family_id: int, sila: str = "أخرى"):
-    return {"ok": db.link_to_family(pid, family_id, sila)}
+def link_family(pid: int, req: FamilyLinkReq):
+    return {"ok": db.link_to_family(pid, req.family_id, req.relation)}
 
 @app.post("/api/family/unlink/{pid}")
 def unlink_family(pid: int):
     return {"ok": db.unlink_from_family(pid)}
+
+@app.get("/api/families/search")
+def search_families(search: str = "", limit: int = 20):
+    return db.search_families(search, limit)
 
 
 # ─── Backup ───

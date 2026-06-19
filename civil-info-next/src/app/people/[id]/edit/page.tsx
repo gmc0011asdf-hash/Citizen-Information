@@ -9,6 +9,7 @@ import {
   getRegions,
   getMukhtars,
   getMaritalStatuses,
+  getFamilyRelations,
   getHayasForRegion,
 } from "@/lib/api";
 import type { Person, Mukhtar } from "@/lib/types";
@@ -25,6 +26,7 @@ export default function EditPersonPage() {
   const [regions, setRegions] = useState<string[]>([]);
   const [mukhtars, setMukhtars] = useState<Mukhtar[]>([]);
   const [maritalStatuses, setMaritalStatuses] = useState<string[]>([]);
+  const [familyRelations, setFamilyRelations] = useState<string[]>([]);
   const [hayas, setHayas] = useState<string[]>([]);
 
   useEffect(() => {
@@ -33,12 +35,14 @@ export default function EditPersonPage() {
       getRegions(),
       getMukhtars(),
       getMaritalStatuses(),
+      getFamilyRelations(),
     ])
-      .then(([person, regs, muks, ms]) => {
+      .then(([person, regs, muks, ms, fr]) => {
         setForm(person);
         setRegions(regs);
         setMukhtars(muks);
         setMaritalStatuses(ms);
+        setFamilyRelations(fr);
         if (person.المنطقة) {
           getHayasForRegion(person.المنطقة)
             .then(setHayas)

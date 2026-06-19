@@ -123,6 +123,23 @@ def init_db():
             if col not in existing:
                 conn.execute(f"ALTER TABLE persons ADD COLUMN {col} {typ}")
 
+        # جدول المناطق
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS regions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                created_at TEXT DEFAULT (datetime('now','localtime'))
+            )
+        """)
+        # Seed default regions if empty
+        if conn.execute("SELECT COUNT(*) FROM regions").fetchone()[0] == 0:
+            for r in MAIN_REGIONS:
+                conn.execute("INSERT OR IGNORE INTO regions (name) VALUES (?)", (r,))
+            # Also add any unique regions from persons table
+            existing = conn.execute("SELECT DISTINCT المنطقة FROM persons WHERE المنطقة IS NOT NULL AND المنطقة!=''").fetchall()
+            for row in existing:
+                conn.execute("INSERT OR IGNORE INTO regions (name) VALUES (?)", (row[0],))
+
         conn.executescript("""
             CREATE INDEX IF NOT EXISTS idx_p_name    ON persons(الاسم);
             CREATE INDEX IF NOT EXISTS idx_p_clean   ON persons(clean_name);
@@ -230,11 +247,11 @@ def _build_where(search='', region='', haya='', mihna='', mukhtar_id=None,
 
 
 def get_persons(search='', region='', haya='', mihna='', mukhtar_id=None,
-                deleted_filter='active', limit=50, offset=0) -> tuple:
+                deleted_filter='active', limit=50, offset=0, include_family=False) -> tuple:
     where, params = _build_where(search, region, haya, mihna, mukhtar_id, deleted_filter)
     with _conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM persons p {where}", params).fetchone()[0]
-        rows  = conn.execute(
+        rows = conn.execute(
             f"""SELECT p.id, p.الاسم, p.التولد, p.المهنة, p.القضاء, p.العنوان,
                        p.المحل, p.الهاتف, p.الشيت, p.الصف, p.is_deleted,
                        p.المنطقة, p.الحي, p.mukhtar_id,
@@ -246,7 +263,36 @@ def get_persons(search='', region='', haya='', mihna='', mukhtar_id=None,
                 {where} ORDER BY p.id LIMIT ? OFFSET ?""",
             params + [limit, offset],
         ).fetchall()
-    return [dict(r) for r in rows], total
+    result = [dict(r) for r in rows]
+
+    if include_family and search and result:
+        matched_ids = {r['id'] for r in result}
+        family_ids = {r['family_id'] for r in result if r.get('family_id')}
+        if family_ids:
+            placeholders = ','.join('?' * len(family_ids))
+            with _conn() as conn:
+                extra = conn.execute(
+                    f"""SELECT p.id, p.الاسم, p.التولد, p.المهنة, p.القضاء, p.العنوان,
+                               p.المحل, p.الهاتف, p.الشيت, p.الصف, p.is_deleted,
+                               p.المنطقة, p.الحي, p.mukhtar_id,
+                               p.الحالة_الزوجية, p.الصلة, p.family_id,
+                               m.الاسم AS mukhtar_name,
+                               p.created_at, p.updated_at
+                        FROM persons p
+                        LEFT JOIN mukhtars m ON p.mukhtar_id = m.id
+                        WHERE p.family_id IN ({placeholders}) AND p.is_deleted=0
+                        AND p.id NOT IN ({','.join('?' * len(matched_ids))})""",
+                    list(family_ids) + list(matched_ids),
+                ).fetchall()
+            for r in extra:
+                d = dict(r)
+                d['included_as_family'] = True
+                result.append(d)
+        for r in result:
+            if 'included_as_family' not in r:
+                r['matched_by_search'] = True
+
+    return result, total
 
 
 def get_person(pid: int) -> dict | None:
@@ -385,6 +431,43 @@ def find_duplicate_mukhtar(name: str, exclude_id: int = None) -> dict | None:
 
 
 # ─────────────────────────────────────────────────
+# إدارة المناطق
+# ─────────────────────────────────────────────────
+
+def get_regions_from_db() -> list:
+    """Get all regions from the regions table"""
+    with _conn() as conn:
+        rows = conn.execute("SELECT id, name, created_at FROM regions ORDER BY id").fetchall()
+    return [dict(r) for r in rows]
+
+
+def add_region(name: str) -> int | None:
+    if not name.strip():
+        return None
+    with _conn() as conn:
+        existing = conn.execute("SELECT id FROM regions WHERE name=?", (name.strip(),)).fetchone()
+        if existing:
+            return None
+        cur = conn.execute("INSERT INTO regions (name) VALUES (?)", (name.strip(),))
+        return cur.lastrowid
+
+
+def delete_region(region_id: int) -> bool:
+    with _conn() as conn:
+        region = conn.execute("SELECT name FROM regions WHERE id=?", (region_id,)).fetchone()
+        if not region:
+            return False
+        name = region[0]
+        # Don't delete if persons or neighborhoods use it
+        persons_count = conn.execute("SELECT COUNT(*) FROM persons WHERE المنطقة=?", (name,)).fetchone()[0]
+        nb_count = conn.execute("SELECT COUNT(*) FROM neighborhoods WHERE المنطقة=?", (name,)).fetchone()[0]
+        if persons_count > 0 or nb_count > 0:
+            return False
+        conn.execute("DELETE FROM regions WHERE id=?", (region_id,))
+        return True
+
+
+# ─────────────────────────────────────────────────
 # CRUD الأشخاص
 # ─────────────────────────────────────────────────
 
@@ -453,6 +536,35 @@ def restore(pid: int) -> bool:
             (pid,),
         )
         return conn.total_changes > 0
+
+
+def hard_delete_person(pid: int) -> bool:
+    """Permanently delete a person from the database"""
+    with _conn() as conn:
+        row = conn.execute("SELECT id, is_deleted, family_id FROM persons WHERE id=?", (pid,)).fetchone()
+        if not row:
+            return False
+        if row['is_deleted'] != 1:
+            raise ValueError("يجب نقل السجل إلى المحذوفات أولاً")
+        # Unlink from family
+        if row['family_id']:
+            conn.execute("UPDATE persons SET family_id=NULL, الصلة=NULL WHERE id=?", (pid,))
+        # Permanent delete
+        conn.execute("DELETE FROM persons WHERE id=?", (pid,))
+        return True
+
+
+def get_person_with_family(pid: int) -> dict | None:
+    """Get person with their family members"""
+    person = get_person(pid)
+    if not person:
+        return None
+    result = dict(person)
+    if person.get('family_id'):
+        result['family_members'] = get_family_members(person['family_id'])
+    else:
+        result['family_members'] = []
+    return result
 
 
 # ─────────────────────────────────────────────────
@@ -651,6 +763,33 @@ def export_to_excel(search='', region='', haya='', mihna='', mukhtar_id=None,
 # ─────────────────────────────────────────────────
 # إدارة الأسرة
 # ─────────────────────────────────────────────────
+
+def search_families(query: str, limit: int = 20) -> list:
+    """Search families by head name or member name"""
+    with _conn() as conn:
+        # Find family_ids where any member matches
+        rows = conn.execute(
+            """SELECT DISTINCT family_id FROM persons
+               WHERE family_id IS NOT NULL AND is_deleted=0
+               AND (الاسم LIKE ? OR clean_name LIKE ?)
+               LIMIT ?""",
+            (f"%{query}%", f"%{query}%", limit),
+        ).fetchall()
+
+        results = []
+        for row in rows:
+            fid = row[0]
+            members = get_family_members(fid)
+            head = next((m for m in members if m.get("الصلة") == "رب الأسرة"), members[0] if members else None)
+            results.append({
+                'family_id': fid,
+                'head_name': head['الاسم'] if head else 'غير محدد',
+                'members_count': len(members),
+                'region': head.get('المنطقة', '') if head else '',
+                'hay': head.get('الحي', '') if head else '',
+            })
+        return results
+
 
 def create_family(head_pid: int) -> int:
     """ينشئ عائلة جديدة مع هذا الشخص رباً للأسرة، يُرجع family_id"""

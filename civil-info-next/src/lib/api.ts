@@ -8,6 +8,8 @@ import type {
   Distribution,
   PersonsResponse,
   LoginResponse,
+  Region,
+  FamilySearchResult,
 } from "./types";
 
 const BASE_URL = "http://localhost:8000";
@@ -103,6 +105,7 @@ export async function getPersons(params: {
   deleted_filter?: string;
   limit?: number;
   offset?: number;
+  include_family?: boolean;
 }): Promise<PersonsResponse> {
   const sp = new URLSearchParams();
   if (params.search) sp.set("search", params.search);
@@ -113,6 +116,7 @@ export async function getPersons(params: {
   if (params.deleted_filter) sp.set("deleted_filter", params.deleted_filter);
   if (params.limit) sp.set("limit", String(params.limit));
   if (params.offset) sp.set("offset", String(params.offset));
+  if (params.include_family) sp.set("include_family", "true");
   return request<PersonsResponse>(`/api/persons?${sp.toString()}`);
 }
 
@@ -171,6 +175,47 @@ export async function deletePerson(id: number): Promise<{ ok: boolean }> {
 
 export async function restorePerson(id: number): Promise<{ ok: boolean }> {
   return request(`/api/persons/${id}/restore`, { method: "POST" });
+}
+
+// Family
+export async function getPersonFamily(pid: number): Promise<Person[]> {
+  return request<Person[]>(`/api/persons/${pid}/family`);
+}
+
+export async function createFamily(pid: number): Promise<{ family_id: number }> {
+  return request(`/api/family/create/${pid}`, { method: "POST" });
+}
+
+export async function linkPersonToFamily(
+  pid: number,
+  familyId: number,
+  relation: string
+): Promise<{ ok: boolean }> {
+  return request(`/api/family/link/${pid}`, {
+    method: "POST",
+    body: JSON.stringify({ family_id: familyId, relation }),
+  });
+}
+
+export async function unlinkPersonFromFamily(
+  pid: number
+): Promise<{ ok: boolean }> {
+  return request(`/api/family/unlink/${pid}`, { method: "POST" });
+}
+
+export async function searchFamilies(
+  search: string
+): Promise<FamilySearchResult[]> {
+  return request<FamilySearchResult[]>(
+    `/api/families/search?search=${encodeURIComponent(search)}`
+  );
+}
+
+// Permanent delete
+export async function permanentDeletePerson(
+  pid: number
+): Promise<{ ok: boolean }> {
+  return request(`/api/persons/${pid}/permanent`, { method: "DELETE" });
 }
 
 // Mukhtars
@@ -243,6 +288,16 @@ export async function deleteNeighborhood(
 
 export async function getRegions(): Promise<string[]> {
   return request<string[]>("/api/regions");
+}
+
+export async function addRegion(name: string): Promise<{ id: number }> {
+  return request(`/api/regions?name=${encodeURIComponent(name)}`, {
+    method: "POST",
+  });
+}
+
+export async function deleteRegion(id: number): Promise<{ ok: boolean }> {
+  return request(`/api/regions/${id}`, { method: "DELETE" });
 }
 
 export async function getHayasForRegion(region: string): Promise<string[]> {

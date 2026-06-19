@@ -753,3 +753,15 @@ select.form-input option:hover {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Fix dropdown/select colors */
+select, option, input, textarea {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+}
+select:focus, input:focus, textarea:focus {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+  border-color: #0b4f6c !important;
+}
+select option { color: #111827 !important; background: #ffffff !important; }
