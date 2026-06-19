@@ -416,15 +416,12 @@ def page_list():
         return
 
     # رأس الجدول + البيانات بأعمدة ثابتة
-    COL_W = [3, 1, 1.5, 1.5, 2, 0.6]
-    hcols = st.columns(COL_W)
-    headers = ["الاسم", "الحالة", "المهنة", "المنطقة", "الهاتف", ""]
-    for hc, h in zip(hcols, headers):
-        hc.markdown(
-            f"<div style='background:var(--primary);color:#fff;font-weight:700;"
-            f"font-size:0.85rem;padding:8px 6px;border-radius:4px;text-align:center'>{h}</div>",
-            unsafe_allow_html=True,
-        )
+    _W = [3, 1, 2, 1.5, 2, 0.5]
+    hdr = st.columns(_W)
+    for col, txt in zip(hdr, ["الاسم", "الحالة", "المهنة", "المنطقة", "الهاتف", ""]):
+        col.markdown(f"<div style='background:#0a3d62;color:#fff;font-weight:700;font-size:0.84rem;"
+                     f"padding:8px 4px;border-radius:4px;text-align:center'>{txt}</div>",
+                     unsafe_allow_html=True)
 
     for r in rows:
         deleted = r["is_deleted"] == 1
@@ -434,20 +431,17 @@ def page_list():
         reg = r.get("المنطقة") or r["القضاء"] or "—"
         telph = r["الهاتف"] or "—"
         fam_ico = " 👨‍👩‍👧" if r.get("family_id") else ""
+        _s = "font-size:.85rem;padding-top:8px;text-align:center;"
 
-        c1, c2, c3, c4, c5, c6 = st.columns(COL_W)
+        c1, c2, c3, c4, c5, c6 = st.columns(_W)
         with c1:
             lbl = f"{'🗑 ' if deleted else ''}{name}{fam_ico}"
             if st.button(lbl, key=f"open_{r['id']}", use_container_width=True):
                 goto("✏️ تفاصيل / تعديل", r["id"])
-        c2.markdown(f"<div style='padding-top:8px;font-size:.82rem;text-align:center;color:var(--text-sec)'>{hz}</div>",
-                    unsafe_allow_html=True)
-        c3.markdown(f"<div style='padding-top:8px;font-size:.88rem;text-align:center'>{mhna}</div>",
-                    unsafe_allow_html=True)
-        c4.markdown(f"<div style='padding-top:8px;font-size:.85rem;text-align:center;color:var(--primary-l);font-weight:600'>{reg}</div>",
-                    unsafe_allow_html=True)
-        c5.markdown(f"<div style='padding-top:8px;font-size:.88rem;text-align:center;direction:ltr'>{telph}</div>",
-                    unsafe_allow_html=True)
+        c2.markdown(f"<div style='{_s}color:#4a5568'>{hz}</div>", unsafe_allow_html=True)
+        c3.markdown(f"<div style='{_s}color:#1a1a2e'>{mhna}</div>", unsafe_allow_html=True)
+        c4.markdown(f"<div style='{_s}color:#1a6fa0;font-weight:600'>{reg}</div>", unsafe_allow_html=True)
+        c5.markdown(f"<div style='{_s}direction:ltr;color:#1a1a2e'>{telph}</div>", unsafe_allow_html=True)
         with c6:
             if has_permission('delete'):
                 if not deleted:
@@ -509,21 +503,32 @@ def page_details():
     tabs = st.tabs(tabs_list)
 
     with tabs[0]:
-        st.markdown("<br>", unsafe_allow_html=True)
-        field_row("الاسم الرباعي واللقب", person.get("الاسم"))
-        field_row("تاريخ الميلاد", person.get("التولد"))
-        field_row("المهنة", person.get("المهنة"))
-        field_row("الحالة الزوجية", person.get("الحالة_الزوجية"))
-        field_row("الصلة بالأسرة", person.get("الصلة"))
-        field_row("المنطقة", person.get("المنطقة"))
-        field_row("القضاء (أصلي)", person.get("القضاء"))
-        field_row("الحي", person.get("الحي"))
-        field_row("عنوان السكن", person.get("العنوان"))
-        field_row("المحل / الزقاق", person.get("المحل"))
-        field_row("رقم الهاتف", person.get("الهاتف"))
-        field_row("المختار", person.get("mukhtar_name"))
-        field_row("تاريخ الإضافة", person.get("created_at"))
-        st.markdown("<br>", unsafe_allow_html=True)
+        fields_html = ""
+        detail_fields = [
+            ("الاسم الرباعي واللقب", person.get("الاسم")),
+            ("تاريخ الميلاد", person.get("التولد")),
+            ("المهنة", person.get("المهنة")),
+            ("الحالة الزوجية", person.get("الحالة_الزوجية")),
+            ("الصلة بالأسرة", person.get("الصلة")),
+            ("المنطقة", person.get("المنطقة")),
+            ("القضاء (أصلي)", person.get("القضاء")),
+            ("الحي", person.get("الحي")),
+            ("عنوان السكن", person.get("العنوان")),
+            ("المحل / الزقاق", person.get("المحل")),
+            ("رقم الهاتف", person.get("الهاتف")),
+            ("المختار", person.get("mukhtar_name")),
+            ("تاريخ الإضافة", person.get("created_at")),
+        ]
+        for lbl, val in detail_fields:
+            v = str(val) if val is not None else "—"
+            if not v.strip() or v.lower() in ('nan', 'none', ''):
+                v = "—"
+            fields_html += (
+                f"<div class='field-row'>"
+                f"<span class='field-label'>{lbl}</span>"
+                f"<span class='field-value'>{v}</span></div>"
+            )
+        st.markdown(f"<div class='detail-card'>{fields_html}</div>", unsafe_allow_html=True)
         if has_permission('delete'):
             if not person["is_deleted"]:
                 if st.button("🗑 حذف ناعم", key="v_del", type="secondary"):
