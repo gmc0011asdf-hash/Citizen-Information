@@ -224,24 +224,17 @@ with st.sidebar:
     st.divider()
     per_page = st.selectbox("سجلات/صفحة", PAGE_ROWS_OPTS, index=1, key="per_page")
 
-    # ─ المختارون أسفل الشريط ─
-    grouped = db.get_mukhtars_grouped_by_region()
-    if grouped:
-        st.divider()
-        for region, mkhs in grouped.items():
-            st.markdown(
-                f"<div class='sidebar-region-title'>📍 {region}</div>",
-                unsafe_allow_html=True,
-            )
-            for m in mkhs:
-                phone = m['الهاتف'] or ''
-                st.markdown(
-                    f"<div class='sidebar-mukhtar-card'>"
-                    f"<div class='sidebar-mukhtar-name'>{m['الاسم']}</div>"
-                    f"<div class='sidebar-mukhtar-phone'>{phone}</div>"
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
+    # ─ حقوق في أسفل الشريط ─
+    st.divider()
+    st.markdown(
+        "<div class='sidebar-footer'>"
+        "<div class='sidebar-footer-title'>تم إنشاء النظام بواسطة</div>"
+        "<div class='sidebar-footer-name'>احمد الذهبي</div>"
+        "<div class='sidebar-footer-phone'>07711228946</div>"
+        "<div class='sidebar-footer-phone'>07822667735</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def goto(page: str, selected_id: int = None):
@@ -422,18 +415,16 @@ def page_list():
         st.info("لا توجد نتائج مطابقة للفلاتر المحددة.")
         return
 
-    # رأس الجدول
-    st.markdown(
-        "<div class='data-row' style='background:var(--primary);border-radius:8px 8px 0 0;margin-bottom:0'>"
-        "<div style='flex:3;color:#fff;font-weight:700;font-size:0.88rem'>الاسم</div>"
-        "<div style='flex:1.2;color:#fff;font-weight:700;font-size:0.88rem;text-align:center'>الحالة</div>"
-        "<div style='flex:2;color:#fff;font-weight:700;font-size:0.88rem'>المهنة</div>"
-        "<div style='flex:1.5;color:#fff;font-weight:700;font-size:0.88rem'>المنطقة</div>"
-        "<div style='flex:2;color:#fff;font-weight:700;font-size:0.88rem'>الهاتف</div>"
-        "<div style='flex:0.8'></div>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    # رأس الجدول + البيانات بأعمدة ثابتة
+    COL_W = [3, 1, 1.5, 1.5, 2, 0.6]
+    hcols = st.columns(COL_W)
+    headers = ["الاسم", "الحالة", "المهنة", "المنطقة", "الهاتف", ""]
+    for hc, h in zip(hcols, headers):
+        hc.markdown(
+            f"<div style='background:var(--primary);color:#fff;font-weight:700;"
+            f"font-size:0.85rem;padding:8px 6px;border-radius:4px;text-align:center'>{h}</div>",
+            unsafe_allow_html=True,
+        )
 
     for r in rows:
         deleted = r["is_deleted"] == 1
@@ -444,22 +435,23 @@ def page_list():
         telph = r["الهاتف"] or "—"
         fam_ico = " 👨‍👩‍👧" if r.get("family_id") else ""
 
-        c1, c2, c3, c4, c5, c6 = st.columns([3, 1.2, 2, 1.5, 2, 0.8])
+        c1, c2, c3, c4, c5, c6 = st.columns(COL_W)
         with c1:
             lbl = f"{'🗑 ' if deleted else ''}{name}{fam_ico}"
             if st.button(lbl, key=f"open_{r['id']}", use_container_width=True):
                 goto("✏️ تفاصيل / تعديل", r["id"])
         c2.markdown(f"<div style='padding-top:8px;font-size:.82rem;text-align:center;color:var(--text-sec)'>{hz}</div>",
                     unsafe_allow_html=True)
-        c3.markdown(f"<div style='padding-top:8px;font-size:.88rem'>{mhna}</div>", unsafe_allow_html=True)
-        c4.markdown(f"<div style='padding-top:8px;font-size:.85rem;color:var(--primary-l);font-weight:600'>{reg}</div>",
+        c3.markdown(f"<div style='padding-top:8px;font-size:.88rem;text-align:center'>{mhna}</div>",
                     unsafe_allow_html=True)
-        c5.markdown(f"<div style='padding-top:8px;font-size:.88rem;direction:ltr;text-align:right'>{telph}</div>",
+        c4.markdown(f"<div style='padding-top:8px;font-size:.85rem;text-align:center;color:var(--primary-l);font-weight:600'>{reg}</div>",
+                    unsafe_allow_html=True)
+        c5.markdown(f"<div style='padding-top:8px;font-size:.88rem;text-align:center;direction:ltr'>{telph}</div>",
                     unsafe_allow_html=True)
         with c6:
             if has_permission('delete'):
                 if not deleted:
-                    if st.button("🗑", key=f"del_{r['id']}", help="حذف ناعم"):
+                    if st.button("🗑", key=f"del_{r['id']}", help="حذف"):
                         db.soft_delete(r["id"])
                         st.rerun()
                 else:
