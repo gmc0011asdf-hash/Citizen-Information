@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Excel files
+*.xlsx
+*.xls
+
+# Database files (each machine has its own data)
+data/*.db
+
+# Exports
+data/exports/
+
+# Claude/AI config
+.claude/
+docs/superpowers/
+
+# Environment
+.env
