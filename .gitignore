@@ -40,3 +40,7 @@ docs/superpowers/
 
 # Environment
 .env
+
+# SQLite temporary files
+data/*.db-shm
+data/*.db-wal
