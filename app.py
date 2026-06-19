@@ -143,70 +143,23 @@ def nav_btn(label: str):
 
 
 with st.sidebar:
-    # ─ الشعار والعنوان ─
     st.markdown("""
-    <div style="text-align:center;padding:16px 0 8px">
-        <div style="font-size:2.4rem">🏛️</div>
-        <div style="font-size:1.05rem;font-weight:800;color:#fff !important;letter-spacing:0.3px">
+    <div style="text-align:center;padding:12px 0 6px">
+        <div style="font-size:2rem">🏛️</div>
+        <div style="font-size:0.95rem;font-weight:800;color:#fff !important">
             المعلومات المدنية للمواطنين
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-    # ─ الساعة التناظرية بتوقيت بغداد ─
-    import streamlit.components.v1 as components
-    components.html("""
-    <div style="display:flex;flex-direction:column;align-items:center;padding:6px 0;font-family:'Cairo',sans-serif">
-        <canvas id="analogClock" width="120" height="120"></canvas>
-        <div id="digitalTime" style="font-size:1.1rem;font-weight:700;color:#d4a534;margin-top:4px;font-variant-numeric:tabular-nums">--:--:--</div>
-        <div id="dateDisplay" style="font-size:0.78rem;color:rgba(255,255,255,0.65);font-weight:500;margin-top:2px">----/--/--</div>
-    </div>
-    <script>
-    function drawClock(){
-        var c=document.getElementById('analogClock');
-        if(!c){setTimeout(drawClock,200);return}
-        var x=c.getContext('2d'),W=120,H=120,R=52,cx=W/2,cy=H/2;
-        var now=new Date(),utc=now.getTime()+now.getTimezoneOffset()*60000;
-        var bd=new Date(utc+3*3600000),h=bd.getHours(),m=bd.getMinutes(),s=bd.getSeconds();
-        x.clearRect(0,0,W,H);
-        x.beginPath();x.arc(cx,cy,R,0,2*Math.PI);
-        x.fillStyle='rgba(255,255,255,0.08)';x.fill();
-        x.strokeStyle='rgba(184,134,11,0.7)';x.lineWidth=2.5;x.stroke();
-        for(var i=0;i<12;i++){var a=i*30*Math.PI/180,l=i%3===0?8:4;
-            x.beginPath();x.moveTo(cx+Math.sin(a)*(R-l-2),cy-Math.cos(a)*(R-l-2));
-            x.lineTo(cx+Math.sin(a)*(R-2),cy-Math.cos(a)*(R-2));
-            x.strokeStyle=i%3===0?'#d4a534':'rgba(255,255,255,0.3)';x.lineWidth=i%3===0?2:1;x.stroke()}
-        var ha=((h%12)+m/60)*30*Math.PI/180;
-        x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+Math.sin(ha)*30,cy-Math.cos(ha)*30);
-        x.strokeStyle='#fff';x.lineWidth=3;x.lineCap='round';x.stroke();
-        var ma=(m+s/60)*6*Math.PI/180;
-        x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+Math.sin(ma)*40,cy-Math.cos(ma)*40);
-        x.strokeStyle='#d0d8e0';x.lineWidth=2;x.stroke();
-        var sa=s*6*Math.PI/180;
-        x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+Math.sin(sa)*44,cy-Math.cos(sa)*44);
-        x.strokeStyle='#d4a534';x.lineWidth=1;x.stroke();
-        x.beginPath();x.arc(cx,cy,3,0,2*Math.PI);x.fillStyle='#d4a534';x.fill();
-        var p=function(n){return String(n).padStart(2,'0')};
-        var dEl=document.getElementById('digitalTime');
-        if(dEl)dEl.textContent=p(h)+':'+p(m)+':'+p(s);
-        var days=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-        var months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-        var dateEl=document.getElementById('dateDisplay');
-        if(dateEl)dateEl.textContent=days[bd.getDay()]+' '+bd.getDate()+' '+months[bd.getMonth()]+' '+bd.getFullYear();
-    }
-    setInterval(drawClock,1000);setTimeout(drawClock,100);
-    </script>
-    """, height=190)
 
     st.divider()
 
     # ─ معلومات المستخدم ─
     role_label = db.ROLES.get(ROLE, ROLE)
     st.markdown(
-        f"<div style='text-align:center;padding:4px 0;font-size:0.82rem'>"
-        f"<span style='color:var(--accent-l) !important'>◉</span> "
-        f"<b>{USER['display_name']}</b>"
-        f"<br><span style='font-size:0.72rem;opacity:0.6'>{role_label}</span>"
+        f"<div style='text-align:center;padding:2px 0;font-size:0.82rem'>"
+        f"<b style='color:#d4a534 !important'>{USER['display_name']}</b>"
+        f"<br><span style='font-size:0.72rem;color:rgba(255,255,255,0.5) !important'>{role_label}</span>"
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -235,6 +188,37 @@ with st.sidebar:
         "</div>",
         unsafe_allow_html=True,
     )
+
+# ─── شريط العنوان + الساعة أعلى المحتوى ───
+import streamlit.components.v1 as components
+components.html("""
+<div style="background:#fff;border-bottom:2px solid #d1d5db;padding:8px 20px;display:flex;
+    align-items:center;justify-content:space-between;border-radius:0 0 10px 10px;
+    font-family:'Cairo',sans-serif;direction:rtl;margin-bottom:4px">
+    <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.2rem">🏛️</span>
+        <span style="font-size:1rem;font-weight:800;color:#0a3d62">المعلومات المدنية للمواطنين</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;direction:ltr">
+        <span id="topDate" style="font-size:0.82rem;color:#4b5563"></span>
+        <span id="topTime" style="font-size:1.1rem;font-weight:700;color:#b8860b;font-variant-numeric:tabular-nums">--:--:--</span>
+    </div>
+</div>
+<script>
+function updateTopClock(){
+    var now=new Date(),utc=now.getTime()+now.getTimezoneOffset()*60000;
+    var bd=new Date(utc+3*3600000),h=bd.getHours(),m=bd.getMinutes(),s=bd.getSeconds();
+    var p=function(n){return String(n).padStart(2,'0')};
+    var el=document.getElementById('topTime');
+    if(el)el.textContent=p(h)+':'+p(m)+':'+p(s);
+    var days=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    var months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    var dEl=document.getElementById('topDate');
+    if(dEl)dEl.textContent=days[bd.getDay()]+' '+bd.getDate()+' '+months[bd.getMonth()]+' '+bd.getFullYear();
+}
+setInterval(updateTopClock,1000);updateTopClock();
+</script>
+""", height=52)
 
 
 def goto(page: str, selected_id: int = None):
@@ -778,28 +762,30 @@ def page_stats():
     s = db.get_stats()
 
     cols = st.columns(4)
-    items_main = [
-        ("إجمالي السجلات", f"{s['total']:,}", ""),
-        ("النشطة", f"{s['active']:,}", ""),
-        ("المحذوفة", f"{s['deleted']:,}", ""),
-        ("بأسماء كاملة", f"{s['with_name']:,}", ""),
-    ]
-    for col, (lbl, val, cls) in zip(cols, items_main):
+    for col, (lbl, val) in zip(cols, [
+        ("إجمالي السجلات", s['total']),
+        ("النشطة", s['active']),
+        ("المحذوفة", s['deleted']),
+        ("بأسماء كاملة", s['with_name']),
+    ]):
         col.markdown(
-            f"<div class='stat-card {cls}'><div class='stat-num'>{val}</div>"
+            f"<div class='stat-card'>"
+            f"<div class='stat-num'>{val:,}</div>"
             f"<div class='stat-lbl'>{lbl}</div></div>",
             unsafe_allow_html=True,
         )
 
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
     cols2 = st.columns(3)
-    items_sec = [
-        ("المختارون", f"{s['mukhtars']:,}", "gold"),
-        ("الأحياء", f"{s['neighborhoods']:,}", "gold"),
-        ("المهن الفريدة", f"{s['mihnas']:,}", "gold"),
-    ]
-    for col, (lbl, val, cls) in zip(cols2, items_sec):
+    for col, (lbl, val) in zip(cols2, [
+        ("المختارون", s['mukhtars']),
+        ("الأحياء", s['neighborhoods']),
+        ("المهن الفريدة", s['mihnas']),
+    ]):
         col.markdown(
-            f"<div class='stat-card {cls}'><div class='stat-num'>{val}</div>"
+            f"<div class='stat-card gold'>"
+            f"<div class='stat-num'>{val:,}</div>"
             f"<div class='stat-lbl'>{lbl}</div></div>",
             unsafe_allow_html=True,
         )
