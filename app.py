@@ -30,27 +30,47 @@ st.markdown("""
     --warning:    #e67e22;
 }
 
-html, body, .stApp, [class*="stMarkdown"], p, span, label, li, td, th, div {
+html, body, .stApp, [class*="stMarkdown"], p, span, label, li, td, th, div,
+.stFormSubmitButton, .stSelectbox, .stMultiSelect, .stCheckbox {
     font-family: 'Cairo', 'Segoe UI', sans-serif !important;
 }
 
-body, .stApp {
-    direction: rtl;
-    text-align: right;
+html, body, .stApp {
+    direction: rtl !important;
+    text-align: right !important;
     background: var(--bg) !important;
+}
+.stMainBlockContainer, .stVerticalBlock, .stForm,
+[data-testid="stAppViewContainer"], [data-testid="stHeader"],
+[data-testid="stMainBlockContainer"], .block-container {
+    direction: rtl !important;
+    text-align: right !important;
+}
+label, .stSelectbox label, .stTextInput label, .stNumberInput label,
+.stCheckbox label, .stRadio label, .stTextArea label {
+    direction: rtl !important;
+    text-align: right !important;
+    width: 100%;
 }
 
 /* ─── الشريط الجانبي ─── */
 section[data-testid="stSidebar"] {
     background: linear-gradient(180deg, var(--primary) 0%, #072a43 100%) !important;
     border-left: 3px solid var(--accent) !important;
-    direction: rtl;
-    text-align: right;
+    border-right: none !important;
+    direction: rtl !important;
+    text-align: right !important;
+    right: 0 !important;
+    left: auto !important;
 }
 section[data-testid="stSidebar"] * {
     color: #e8ecf1 !important;
-    direction: rtl;
-    text-align: right;
+    direction: rtl !important;
+    text-align: right !important;
+}
+[data-testid="stSidebarCollapsedControl"] {
+    right: auto !important;
+    left: auto !important;
 }
 section[data-testid="stSidebar"] .stButton > button {
     width: 100%;
@@ -521,82 +541,49 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     # ─ الساعة التناظرية بتوقيت بغداد ─
-    st.markdown("""
-    <div class="clock-container">
+    import streamlit.components.v1 as components
+    components.html("""
+    <div style="display:flex;flex-direction:column;align-items:center;padding:6px 0;font-family:'Cairo',sans-serif">
         <canvas id="analogClock" width="120" height="120"></canvas>
-        <div class="clock-time" id="digitalTime">--:--:--</div>
-        <div class="clock-date" id="dateDisplay">----/--/--</div>
+        <div id="digitalTime" style="font-size:1.1rem;font-weight:700;color:#d4a534;margin-top:4px;font-variant-numeric:tabular-nums">--:--:--</div>
+        <div id="dateDisplay" style="font-size:0.78rem;color:rgba(255,255,255,0.65);font-weight:500;margin-top:2px">----/--/--</div>
     </div>
     <script>
-    function drawClock() {
-        const canvas = document.getElementById('analogClock');
-        if (!canvas) { setTimeout(drawClock, 200); return; }
-        const ctx = canvas.getContext('2d');
-        const W = 120, H = 120, R = 52;
-        const cx = W/2, cy = H/2;
-
-        // Baghdad = UTC+3
-        const now = new Date();
-        const utc = now.getTime() + now.getTimezoneOffset()*60000;
-        const baghdad = new Date(utc + 3*3600000);
-        const h = baghdad.getHours(), m = baghdad.getMinutes(), s = baghdad.getSeconds();
-
-        ctx.clearRect(0,0,W,H);
-
-        // face
-        ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI);
-        ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
-        ctx.strokeStyle = 'rgba(184,134,11,0.7)'; ctx.lineWidth = 2.5; ctx.stroke();
-
-        // hour marks
-        for (let i=0;i<12;i++) {
-            const a = (i*30)*Math.PI/180;
-            const l = i%3===0 ? 8 : 4;
-            const lw = i%3===0 ? 2 : 1;
-            ctx.beginPath();
-            ctx.moveTo(cx+Math.sin(a)*(R-l-2), cy-Math.cos(a)*(R-l-2));
-            ctx.lineTo(cx+Math.sin(a)*(R-2), cy-Math.cos(a)*(R-2));
-            ctx.strokeStyle = i%3===0 ? '#d4a534' : 'rgba(255,255,255,0.3)';
-            ctx.lineWidth = lw; ctx.stroke();
-        }
-
-        // hour hand
-        const ha = ((h%12)+m/60)*30*Math.PI/180;
-        ctx.beginPath(); ctx.moveTo(cx,cy);
-        ctx.lineTo(cx+Math.sin(ha)*30, cy-Math.cos(ha)*30);
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.stroke();
-
-        // minute hand
-        const ma = (m+s/60)*6*Math.PI/180;
-        ctx.beginPath(); ctx.moveTo(cx,cy);
-        ctx.lineTo(cx+Math.sin(ma)*40, cy-Math.cos(ma)*40);
-        ctx.strokeStyle = '#d0d8e0'; ctx.lineWidth = 2; ctx.stroke();
-
-        // second hand
-        const sa = s*6*Math.PI/180;
-        ctx.beginPath(); ctx.moveTo(cx,cy);
-        ctx.lineTo(cx+Math.sin(sa)*44, cy-Math.cos(sa)*44);
-        ctx.strokeStyle = '#d4a534'; ctx.lineWidth = 1; ctx.stroke();
-
-        // center dot
-        ctx.beginPath(); ctx.arc(cx,cy,3,0,2*Math.PI);
-        ctx.fillStyle = '#d4a534'; ctx.fill();
-
-        // digital
-        const pad = n => String(n).padStart(2,'0');
-        const dEl = document.getElementById('digitalTime');
-        if(dEl) dEl.textContent = pad(h)+':'+pad(m)+':'+pad(s);
-
-        // date
-        const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-        const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-        const dateEl = document.getElementById('dateDisplay');
-        if(dateEl) dateEl.textContent = days[baghdad.getDay()]+' '+baghdad.getDate()+' '+months[baghdad.getMonth()]+' '+baghdad.getFullYear();
+    function drawClock(){
+        var c=document.getElementById('analogClock');
+        if(!c){setTimeout(drawClock,200);return}
+        var x=c.getContext('2d'),W=120,H=120,R=52,cx=W/2,cy=H/2;
+        var now=new Date(),utc=now.getTime()+now.getTimezoneOffset()*60000;
+        var bd=new Date(utc+3*3600000),h=bd.getHours(),m=bd.getMinutes(),s=bd.getSeconds();
+        x.clearRect(0,0,W,H);
+        x.beginPath();x.arc(cx,cy,R,0,2*Math.PI);
+        x.fillStyle='rgba(255,255,255,0.08)';x.fill();
+        x.strokeStyle='rgba(184,134,11,0.7)';x.lineWidth=2.5;x.stroke();
+        for(var i=0;i<12;i++){var a=i*30*Math.PI/180,l=i%3===0?8:4;
+            x.beginPath();x.moveTo(cx+Math.sin(a)*(R-l-2),cy-Math.cos(a)*(R-l-2));
+            x.lineTo(cx+Math.sin(a)*(R-2),cy-Math.cos(a)*(R-2));
+            x.strokeStyle=i%3===0?'#d4a534':'rgba(255,255,255,0.3)';x.lineWidth=i%3===0?2:1;x.stroke()}
+        var ha=((h%12)+m/60)*30*Math.PI/180;
+        x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+Math.sin(ha)*30,cy-Math.cos(ha)*30);
+        x.strokeStyle='#fff';x.lineWidth=3;x.lineCap='round';x.stroke();
+        var ma=(m+s/60)*6*Math.PI/180;
+        x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+Math.sin(ma)*40,cy-Math.cos(ma)*40);
+        x.strokeStyle='#d0d8e0';x.lineWidth=2;x.stroke();
+        var sa=s*6*Math.PI/180;
+        x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+Math.sin(sa)*44,cy-Math.cos(sa)*44);
+        x.strokeStyle='#d4a534';x.lineWidth=1;x.stroke();
+        x.beginPath();x.arc(cx,cy,3,0,2*Math.PI);x.fillStyle='#d4a534';x.fill();
+        var p=function(n){return String(n).padStart(2,'0')};
+        var dEl=document.getElementById('digitalTime');
+        if(dEl)dEl.textContent=p(h)+':'+p(m)+':'+p(s);
+        var days=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+        var months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        var dateEl=document.getElementById('dateDisplay');
+        if(dateEl)dateEl.textContent=days[bd.getDay()]+' '+bd.getDate()+' '+months[bd.getMonth()]+' '+bd.getFullYear();
     }
-    setInterval(drawClock, 1000);
-    setTimeout(drawClock, 300);
+    setInterval(drawClock,1000);setTimeout(drawClock,100);
     </script>
-    """, unsafe_allow_html=True)
+    """, height=190)
 
     st.divider()
 
