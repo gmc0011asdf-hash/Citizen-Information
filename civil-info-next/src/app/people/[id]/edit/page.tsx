@@ -235,11 +235,18 @@ export default function EditPersonPage() {
               </div>
               <div className="form-group">
                 <label>الصلة</label>
-                <input
+                <select
                   className="form-input"
                   value={form.الصلة || ""}
                   onChange={(e) => updateField("الصلة", e.target.value)}
-                />
+                >
+                  <option value="">اختر</option>
+                  {familyRelations.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

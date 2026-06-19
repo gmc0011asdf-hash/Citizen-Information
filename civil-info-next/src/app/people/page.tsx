@@ -56,6 +56,7 @@ export default function PeoplePage() {
         deleted_filter: status,
         limit: perPage,
         offset: (page - 1) * perPage,
+        include_family: !!search,
       });
       setPersons(res.rows);
       setTotal(res.total);
@@ -233,6 +234,36 @@ export default function PeoplePage() {
                       >
                         {p.الاسم}
                       </Link>
+                      {p.included_as_family && (
+                        <span
+                          style={{
+                            marginRight: 6,
+                            fontSize: 11,
+                            background: "#dbeafe",
+                            color: "#1e40af",
+                            padding: "2px 8px",
+                            borderRadius: 12,
+                            fontWeight: 600,
+                          }}
+                        >
+                          من نفس الأسرة
+                        </span>
+                      )}
+                      {p.matched_by_search && (
+                        <span
+                          style={{
+                            marginRight: 6,
+                            fontSize: 11,
+                            background: "#dcfce7",
+                            color: "#166534",
+                            padding: "2px 8px",
+                            borderRadius: 12,
+                            fontWeight: 600,
+                          }}
+                        >
+                          نتيجة مطابقة
+                        </span>
+                      )}
                     </td>
                     <td>
                       <span

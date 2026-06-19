@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { getPersons, restorePerson } from "@/lib/api";
+import { getPersons, restorePerson, permanentDeletePerson } from "@/lib/api";
 import type { Person } from "@/lib/types";
 
 export default function DeletedPage() {
@@ -13,6 +13,11 @@ export default function DeletedPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
+
+  // Permanent delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<Person | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const storedPerPage = localStorage.getItem("perPage");
@@ -56,6 +61,21 @@ export default function DeletedPage() {
       fetchData();
     } catch {
       /* ignore */
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!deleteTarget || deleteConfirmText !== "حذف") return;
+    setDeleting(true);
+    try {
+      await permanentDeletePerson(deleteTarget.id);
+      setDeleteTarget(null);
+      setDeleteConfirmText("");
+      fetchData();
+    } catch {
+      /* ignore */
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -127,12 +147,20 @@ export default function DeletedPage() {
                       {p.الهاتف || "-"}
                     </td>
                     <td>
-                      <button
-                        onClick={() => handleRestore(p.id)}
-                        className="btn btn-sm btn-success"
-                      >
-                        استعادة
-                      </button>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button
+                          onClick={() => handleRestore(p.id)}
+                          className="btn btn-sm btn-success"
+                        >
+                          استعادة
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(p)}
+                          className="btn btn-sm btn-danger"
+                        >
+                          حذف نهائي
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -185,6 +213,97 @@ export default function DeletedPage() {
           </div>
         )}
       </div>
+
+      {/* Permanent Delete Confirmation Dialog */}
+      {deleteTarget && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100,
+          }}
+          onClick={() => {
+            setDeleteTarget(null);
+            setDeleteConfirmText("");
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: 12,
+              padding: 32,
+              maxWidth: 450,
+              width: "90%",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              style={{
+                margin: "0 0 12px",
+                color: "#dc2626",
+                fontSize: 18,
+              }}
+            >
+              تأكيد الحذف النهائي
+            </h3>
+            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 8 }}>
+              الشخص: <strong style={{ color: "#111827" }}>{deleteTarget.الاسم}</strong>
+            </p>
+            <div
+              style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 16,
+                fontSize: 13,
+                color: "#991b1b",
+              }}
+            >
+              هذا الإجراء سيحذف السجل نهائيا من قاعدة البيانات ولا يمكن
+              استعادته
+            </div>
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 13, color: "#64748b" }}>
+                اكتب &quot;حذف&quot; للتأكيد
+              </label>
+              <input
+                className="form-input"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder='اكتب "حذف" هنا'
+                autoFocus
+              />
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteConfirmText("");
+                }}
+                className="btn btn-outline"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handlePermanentDelete}
+                className="btn btn-danger"
+                disabled={deleteConfirmText !== "حذف" || deleting}
+              >
+                {deleting ? <span className="spinner" /> : "حذف نهائي"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

@@ -7,6 +7,8 @@ import {
   getNeighborhoods,
   addNeighborhood,
   deleteNeighborhood,
+  addRegion,
+  deleteRegion,
 } from "@/lib/api";
 import type { Neighborhood } from "@/lib/types";
 
@@ -20,6 +22,10 @@ export default function RegionsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Add region state
+  const [newRegionName, setNewRegionName] = useState("");
+  const [savingRegion, setSavingRegion] = useState(false);
 
   const fetchData = () => {
     setLoading(true);
@@ -40,7 +46,7 @@ export default function RegionsPage() {
     ? neighborhoods.filter((n) => n.region === selectedRegion)
     : neighborhoods;
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleAddNeighborhood = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -61,13 +67,59 @@ export default function RegionsPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDeleteNeighborhood = async (id: number) => {
     if (!confirm("هل أنت متأكد من حذف هذا الحي؟")) return;
     try {
       await deleteNeighborhood(id);
       fetchData();
     } catch {
       /* ignore */
+    }
+  };
+
+  const handleAddRegion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (!newRegionName.trim()) {
+      setError("يرجى إدخال اسم المنطقة");
+      return;
+    }
+    setSavingRegion(true);
+    try {
+      await addRegion(newRegionName);
+      setSuccess("تم إضافة المنطقة بنجاح");
+      setNewRegionName("");
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "خطأ في إضافة المنطقة");
+    } finally {
+      setSavingRegion(false);
+    }
+  };
+
+  const handleDeleteRegion = async (regionName: string) => {
+    const regionNeighborhoods = neighborhoods.filter(
+      (n) => n.region === regionName
+    );
+    if (regionNeighborhoods.length > 0) {
+      setError(
+        `لا يمكن حذف المنطقة "${regionName}" لأنها تحتوي على ${regionNeighborhoods.length} حي`
+      );
+      return;
+    }
+    if (!confirm(`هل أنت متأكد من حذف المنطقة "${regionName}"؟`)) return;
+    try {
+      // We need to find the region id - we'll use the index as a workaround
+      // since the API returns strings. We pass the name to delete by index.
+      const idx = regions.indexOf(regionName);
+      if (idx === -1) return;
+      await deleteRegion(idx + 1);
+      if (selectedRegion === regionName) setSelectedRegion("");
+      setSuccess("تم حذف المنطقة بنجاح");
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "خطأ في حذف المنطقة");
     }
   };
 
@@ -79,6 +131,36 @@ export default function RegionsPage() {
           <h3 style={{ margin: "0 0 16px", color: "var(--navy)" }}>
             المناطق
           </h3>
+
+          {/* Add region form */}
+          <form
+            onSubmit={handleAddRegion}
+            style={{
+              display: "flex",
+              gap: 8,
+              marginBottom: 16,
+              alignItems: "end",
+            }}
+          >
+            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+              <label>إضافة منطقة جديدة</label>
+              <input
+                className="form-input"
+                value={newRegionName}
+                onChange={(e) => setNewRegionName(e.target.value)}
+                placeholder="اسم المنطقة"
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={savingRegion}
+              style={{ height: 42 }}
+            >
+              {savingRegion ? <span className="spinner" /> : "إضافة"}
+            </button>
+          </form>
+
           {loading ? (
             <div style={{ textAlign: "center", padding: 20 }}>
               <div className="spinner spinner-dark" />
@@ -97,27 +179,43 @@ export default function RegionsPage() {
                   (n) => n.region === r
                 ).length;
                 return (
-                  <button
+                  <div
                     key={r}
-                    className={`btn ${selectedRegion === r ? "btn-primary" : "btn-outline"}`}
-                    onClick={() => setSelectedRegion(r)}
-                    style={{ justifyContent: "space-between" }}
+                    style={{
+                      display: "flex",
+                      gap: 4,
+                      alignItems: "center",
+                    }}
                   >
-                    <span>{r}</span>
-                    <span
-                      style={{
-                        background:
-                          selectedRegion === r
-                            ? "rgba(255,255,255,0.2)"
-                            : "#f1f5f9",
-                        padding: "2px 8px",
-                        borderRadius: 12,
-                        fontSize: 12,
-                      }}
+                    <button
+                      className={`btn ${selectedRegion === r ? "btn-primary" : "btn-outline"}`}
+                      onClick={() => setSelectedRegion(r)}
+                      style={{ flex: 1, justifyContent: "space-between" }}
                     >
-                      {count}
-                    </span>
-                  </button>
+                      <span>{r}</span>
+                      <span
+                        style={{
+                          background:
+                            selectedRegion === r
+                              ? "rgba(255,255,255,0.2)"
+                              : "#f1f5f9",
+                          padding: "2px 8px",
+                          borderRadius: 12,
+                          fontSize: 12,
+                        }}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteRegion(r)}
+                      className="btn btn-sm btn-danger"
+                      title="حذف المنطقة"
+                      style={{ padding: "5px 8px", fontSize: 14 }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -133,9 +231,9 @@ export default function RegionsPage() {
           {error && <div className="alert alert-error">{error}</div>}
           {success && <div className="alert alert-success">{success}</div>}
 
-          {/* Add form */}
+          {/* Add neighborhood form */}
           <form
-            onSubmit={handleAdd}
+            onSubmit={handleAddNeighborhood}
             style={{
               display: "flex",
               gap: 8,
@@ -205,7 +303,7 @@ export default function RegionsPage() {
                       <td>{n.region}</td>
                       <td>
                         <button
-                          onClick={() => handleDelete(n.id)}
+                          onClick={() => handleDeleteNeighborhood(n.id)}
                           className="btn btn-sm btn-danger"
                         >
                           حذف

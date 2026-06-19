@@ -8,6 +8,7 @@ import {
   updateMukhtar,
   deleteMukhtar,
   getNeighborhoods,
+  getRegions,
 } from "@/lib/api";
 import type { Mukhtar, Neighborhood } from "@/lib/types";
 
@@ -18,10 +19,12 @@ export default function MukhtarsPage() {
   const [grouped, setGrouped] = useState<Record<string, Mukhtar[]>>({});
   const [loading, setLoading] = useState(true);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
+  const [regions, setRegions] = useState<string[]>([]);
 
   // Add form
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [newRegion, setNewRegion] = useState("");
   const [newNeighborhoodIds, setNewNeighborhoodIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -31,14 +34,16 @@ export default function MukhtarsPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editRegion, setEditRegion] = useState("");
   const [editNeighborhoodIds, setEditNeighborhoodIds] = useState<number[]>([]);
 
   const fetchData = () => {
     setLoading(true);
-    Promise.all([getMukhtarsGrouped(), getNeighborhoods()])
-      .then(([g, n]) => {
+    Promise.all([getMukhtarsGrouped(), getNeighborhoods(), getRegions()])
+      .then(([g, n, r]) => {
         setGrouped(g);
         setNeighborhoods(n);
+        setRegions(r);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -56,6 +61,16 @@ export default function MukhtarsPage() {
     return grouped[activeTab] || [];
   };
 
+  // Filter neighborhoods by selected region for add form
+  const addFilteredNeighborhoods = newRegion
+    ? neighborhoods.filter((n) => n.region === newRegion)
+    : neighborhoods;
+
+  // Filter neighborhoods by selected region for edit form
+  const editFilteredNeighborhoods = editRegion
+    ? neighborhoods.filter((n) => n.region === editRegion)
+    : neighborhoods;
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -70,10 +85,12 @@ export default function MukhtarsPage() {
         name: newName,
         phone: newPhone,
         neighborhood_ids: newNeighborhoodIds,
+        region: newRegion,
       });
       setSuccess("تم إضافة المختار بنجاح");
       setNewName("");
       setNewPhone("");
+      setNewRegion("");
       setNewNeighborhoodIds([]);
       fetchData();
     } catch (err) {
@@ -97,6 +114,7 @@ export default function MukhtarsPage() {
     setEditId(m.id);
     setEditName(m.name);
     setEditPhone(m.phone || "");
+    setEditRegion(m.region || "");
     setEditNeighborhoodIds(m.neighborhood_ids || []);
   };
 
@@ -108,6 +126,7 @@ export default function MukhtarsPage() {
         name: editName,
         phone: editPhone,
         neighborhood_ids: editNeighborhoodIds,
+        region: editRegion,
       });
       setEditId(null);
       fetchData();
@@ -168,9 +187,27 @@ export default function MukhtarsPage() {
                   onChange={(e) => setNewPhone(e.target.value)}
                 />
               </div>
+              <div className="form-group">
+                <label>المنطقة</label>
+                <select
+                  className="form-input"
+                  value={newRegion}
+                  onChange={(e) => {
+                    setNewRegion(e.target.value);
+                    setNewNeighborhoodIds([]);
+                  }}
+                >
+                  <option value="">اختر المنطقة</option>
+                  {regions.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="form-group">
-              <label>الأحياء التابعة</label>
+              <label>الأحياء التابعة {newRegion && `(${newRegion})`}</label>
               <div
                 style={{
                   display: "flex",
@@ -183,36 +220,44 @@ export default function MukhtarsPage() {
                   borderRadius: 8,
                 }}
               >
-                {neighborhoods.map((n) => (
-                  <label
-                    key={n.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      fontSize: 13,
-                      padding: "4px 8px",
-                      background: newNeighborhoodIds.includes(n.id)
-                        ? "#dbeafe"
-                        : "#f8fafc",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={newNeighborhoodIds.includes(n.id)}
-                      onChange={() =>
-                        toggleNeighborhood(
-                          n.id,
-                          newNeighborhoodIds,
-                          setNewNeighborhoodIds
-                        )
-                      }
-                    />
-                    {n.name} ({n.region})
-                  </label>
-                ))}
+                {addFilteredNeighborhoods.length === 0 ? (
+                  <span style={{ color: "#94a3b8", fontSize: 13 }}>
+                    {newRegion
+                      ? "لا توجد أحياء لهذه المنطقة"
+                      : "اختر المنطقة أولا"}
+                  </span>
+                ) : (
+                  addFilteredNeighborhoods.map((n) => (
+                    <label
+                      key={n.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        fontSize: 13,
+                        padding: "4px 8px",
+                        background: newNeighborhoodIds.includes(n.id)
+                          ? "#dbeafe"
+                          : "#f8fafc",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newNeighborhoodIds.includes(n.id)}
+                        onChange={() =>
+                          toggleNeighborhood(
+                            n.id,
+                            newNeighborhoodIds,
+                            setNewNeighborhoodIds
+                          )
+                        }
+                      />
+                      {n.name}
+                    </label>
+                  ))
+                )}
               </div>
             </div>
             <button
@@ -240,6 +285,7 @@ export default function MukhtarsPage() {
                   <th>#</th>
                   <th>الاسم</th>
                   <th>الهاتف</th>
+                  <th>المنطقة</th>
                   <th>الأحياء</th>
                   <th>إجراءات</th>
                 </tr>
@@ -276,6 +322,28 @@ export default function MukhtarsPage() {
                     </td>
                     <td>
                       {editId === m.id ? (
+                        <select
+                          className="form-input"
+                          value={editRegion}
+                          onChange={(e) => {
+                            setEditRegion(e.target.value);
+                            setEditNeighborhoodIds([]);
+                          }}
+                          style={{ padding: "4px 8px", fontSize: 13 }}
+                        >
+                          <option value="">اختر</option>
+                          {regions.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span>{m.region || "-"}</span>
+                      )}
+                    </td>
+                    <td>
+                      {editId === m.id ? (
                         <div
                           style={{
                             display: "flex",
@@ -285,36 +353,44 @@ export default function MukhtarsPage() {
                             overflowY: "auto",
                           }}
                         >
-                          {neighborhoods.map((n) => (
-                            <label
-                              key={n.id}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 2,
-                                fontSize: 11,
-                                padding: "2px 6px",
-                                background: editNeighborhoodIds.includes(n.id)
-                                  ? "#dbeafe"
-                                  : "#f8fafc",
-                                borderRadius: 4,
-                                cursor: "pointer",
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={editNeighborhoodIds.includes(n.id)}
-                                onChange={() =>
-                                  toggleNeighborhood(
-                                    n.id,
-                                    editNeighborhoodIds,
-                                    setEditNeighborhoodIds
-                                  )
-                                }
-                              />
-                              {n.name}
-                            </label>
-                          ))}
+                          {editFilteredNeighborhoods.length === 0 ? (
+                            <span style={{ color: "#94a3b8", fontSize: 11 }}>
+                              {editRegion
+                                ? "لا توجد أحياء"
+                                : "اختر المنطقة"}
+                            </span>
+                          ) : (
+                            editFilteredNeighborhoods.map((n) => (
+                              <label
+                                key={n.id}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 2,
+                                  fontSize: 11,
+                                  padding: "2px 6px",
+                                  background: editNeighborhoodIds.includes(n.id)
+                                    ? "#dbeafe"
+                                    : "#f8fafc",
+                                  borderRadius: 4,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={editNeighborhoodIds.includes(n.id)}
+                                  onChange={() =>
+                                    toggleNeighborhood(
+                                      n.id,
+                                      editNeighborhoodIds,
+                                      setEditNeighborhoodIds
+                                    )
+                                  }
+                                />
+                                {n.name}
+                              </label>
+                            ))
+                          )}
                         </div>
                       ) : (
                         <span style={{ fontSize: 12 }}>
