@@ -2,6 +2,8 @@
 import sqlite3
 import json
 import io
+import shutil
+from datetime import datetime, timedelta
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "data" / "ali_gharbi.db"
@@ -868,3 +870,80 @@ def import_from_excel_file(filepath=None, clear_first: bool = False) -> tuple:
         total_inserted += len(batch)
 
     return total_inserted, None
+
+
+# ─────────────────────────────────────────────────
+# النسخ الاحتياطي
+# ─────────────────────────────────────────────────
+
+BACKUP_DIR = DB_PATH.parent / "backups"
+
+
+def create_backup() -> Path | None:
+    """إنشاء نسخة احتياطية من قاعدة البيانات"""
+    if not DB_PATH.exists():
+        return None
+    BACKUP_DIR.mkdir(exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    dest = BACKUP_DIR / f"ali_gharbi_backup_{stamp}.db"
+    shutil.copy2(str(DB_PATH), str(dest))
+    return dest
+
+
+def get_backups() -> list:
+    """قائمة النسخ الاحتياطية مرتبة من الأحدث"""
+    if not BACKUP_DIR.exists():
+        return []
+    files = sorted(BACKUP_DIR.glob("ali_gharbi_backup_*.db"), reverse=True)
+    result = []
+    for f in files:
+        result.append({
+            'path': f,
+            'name': f.name,
+            'size_mb': f.stat().st_size / 1024 / 1024,
+            'date': datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
+        })
+    return result
+
+
+def restore_backup(backup_path: str | Path) -> bool:
+    """استعادة قاعدة البيانات من نسخة احتياطية"""
+    src = Path(backup_path)
+    if not src.exists():
+        return False
+    shutil.copy2(str(src), str(DB_PATH))
+    return True
+
+
+def delete_backup(backup_path: str | Path) -> bool:
+    """حذف نسخة احتياطية"""
+    src = Path(backup_path)
+    if src.exists():
+        src.unlink()
+        return True
+    return False
+
+
+def auto_backup_if_needed() -> Path | None:
+    """نسخ احتياطي تلقائي يومي — يُنشئ نسخة واحدة يومياً فقط"""
+    if not DB_PATH.exists():
+        return None
+    BACKUP_DIR.mkdir(exist_ok=True)
+    today = datetime.now().strftime("%Y%m%d")
+    today_backups = list(BACKUP_DIR.glob(f"ali_gharbi_backup_{today}_*.db"))
+    if today_backups:
+        return None
+    return create_backup()
+
+
+def cleanup_old_backups(keep_days: int = 30):
+    """حذف النسخ الاحتياطية الأقدم من عدد أيام محدد"""
+    if not BACKUP_DIR.exists():
+        return 0
+    cutoff = datetime.now() - timedelta(days=keep_days)
+    deleted = 0
+    for f in BACKUP_DIR.glob("ali_gharbi_backup_*.db"):
+        if datetime.fromtimestamp(f.stat().st_mtime) < cutoff:
+            f.unlink()
+            deleted += 1
+    return deleted

@@ -83,6 +83,15 @@ if not st.session_state.get("regions_normalized"):
         pass
     st.session_state["regions_normalized"] = True
 
+if not st.session_state.get("auto_backup_done"):
+    try:
+        backup = db.auto_backup_if_needed()
+        if backup:
+            db.cleanup_old_backups(keep_days=30)
+    except Exception:
+        pass
+    st.session_state["auto_backup_done"] = True
+
 # ─────────────────────────────────────────────────
 # الشريط الجانبي
 # ─────────────────────────────────────────────────
@@ -987,8 +996,8 @@ def page_setup():
     st.info(f"📁 **مكان ملف Excel:** `{default_excel}`\n\n"
             f"ضع ملفك باسم **`{db.EXCEL_FILE_NAME}`** في نفس المجلد.")
 
-    tab_excel, tab_old, tab_maint = st.tabs(
-        ["📊 استيراد من Excel", "🗄 استيراد من DB القديمة", "🔧 الصيانة"]
+    tab_excel, tab_old, tab_backup, tab_maint = st.tabs(
+        ["📊 استيراد من Excel", "🗄 استيراد من DB القديمة", "💾 النسخ الاحتياطي", "🔧 الصيانة"]
     )
 
     with tab_excel:
@@ -1037,6 +1046,84 @@ def page_setup():
                 db.normalize_all_regions()
                 st.success(f"✅ تم استيراد {count:,} سجل")
                 st.rerun()
+
+    with tab_backup:
+        st.markdown(
+            "<div class='card'>"
+            "<div class='card-title'>💾 النسخ الاحتياطي التلقائي</div>"
+            "<div class='card-sub'>يتم إنشاء نسخة احتياطية تلقائياً مرة واحدة يومياً عند فتح النظام. "
+            "يتم حذف النسخ الأقدم من 30 يوماً تلقائياً.</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("📸 إنشاء نسخة احتياطية الآن", type="primary",
+                         use_container_width=True):
+                bp = db.create_backup()
+                if bp:
+                    st.success(f"✅ تم إنشاء نسخة: {bp.name}")
+                    st.rerun()
+                else:
+                    st.error("لا توجد قاعدة بيانات للنسخ")
+        with c2:
+            if st.button("🗑 حذف النسخ الأقدم من 30 يوم", use_container_width=True):
+                n = db.cleanup_old_backups(30)
+                st.success(f"✅ تم حذف {n} نسخة قديمة")
+                st.rerun()
+
+        st.markdown("---")
+        backups = db.get_backups()
+        if not backups:
+            st.info("لا توجد نسخ احتياطية بعد.")
+        else:
+            st.markdown(f"**النسخ الاحتياطية المتوفرة ({len(backups)}):**")
+            for i, bk in enumerate(backups):
+                ca, cb, cc, cd = st.columns([3, 2, 1, 1])
+                ca.markdown(f"**{bk['name']}**")
+                cb.markdown(f"📅 {bk['date']}")
+                cc.markdown(f"📦 {bk['size_mb']:.1f} MB")
+                with cd:
+                    col_r, col_d = st.columns(2)
+                    with col_r:
+                        if st.button("↩️", key=f"restore_{i}", help="استعادة هذه النسخة"):
+                            st.session_state[f"confirm_restore_{i}"] = True
+                            st.rerun()
+                    with col_d:
+                        if st.button("🗑", key=f"delbk_{i}", help="حذف"):
+                            db.delete_backup(bk['path'])
+                            st.rerun()
+
+                if st.session_state.get(f"confirm_restore_{i}"):
+                    st.warning(f"⚠️ هل تريد استعادة النسخة **{bk['name']}**؟ سيتم استبدال البيانات الحالية!")
+                    cr1, cr2 = st.columns(2)
+                    with cr1:
+                        if st.button("✅ نعم، استعادة", key=f"yes_restore_{i}", type="primary"):
+                            db.create_backup()
+                            db.restore_backup(bk['path'])
+                            st.session_state[f"confirm_restore_{i}"] = False
+                            st.success("✅ تم الاستعادة بنجاح (تم أخذ نسخة من البيانات الحالية أولاً)")
+                            st.rerun()
+                    with cr2:
+                        if st.button("❌ إلغاء", key=f"no_restore_{i}"):
+                            st.session_state[f"confirm_restore_{i}"] = False
+                            st.rerun()
+
+                st.markdown("<hr style='margin:3px 0;border-color:#eee'>", unsafe_allow_html=True)
+
+        st.markdown("---")
+        st.markdown("**📤 تصدير قاعدة البيانات:**")
+        db_path = db.DB_PATH
+        if db_path.exists():
+            with open(str(db_path), 'rb') as f:
+                st.download_button(
+                    "⬇️ تحميل قاعدة البيانات",
+                    data=f.read(),
+                    file_name="ali_gharbi.db",
+                    mime="application/octet-stream",
+                    key="dl_db",
+                )
 
     with tab_maint:
         c1, c2 = st.columns(2)

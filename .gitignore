@@ -31,6 +31,9 @@ data/*.db
 # Exports
 data/exports/
 
+# Backups
+data/backups/
+
 # Claude/AI config
 .claude/
 docs/superpowers/
