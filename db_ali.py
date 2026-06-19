@@ -3,6 +3,7 @@ import sqlite3
 import json
 import io
 import shutil
+import hashlib
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -88,6 +89,25 @@ def init_db():
                 PRIMARY KEY (mukhtar_id, neighborhood_id)
             )
         """)
+
+        # جدول المستخدمين
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                username    TEXT NOT NULL UNIQUE,
+                password    TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                role        TEXT NOT NULL DEFAULT 'viewer',
+                created_at  TEXT DEFAULT (datetime('now','localtime'))
+            )
+        """)
+        # إنشاء المستخدم الافتراضي admin إذا لم يكن موجوداً
+        exists = conn.execute("SELECT 1 FROM users WHERE username='admin'").fetchone()
+        if not exists:
+            conn.execute(
+                "INSERT INTO users (username, password, display_name, role) VALUES (?, ?, ?, ?)",
+                ('admin', _hash_pw('admin'), 'المدير', 'admin'),
+            )
 
         # إضافة أعمدة جديدة لـ persons إذا لم تكن موجودة
         existing = {r[1] for r in conn.execute("PRAGMA table_info(persons)").fetchall()}
@@ -278,6 +298,69 @@ def find_duplicate_persons(name: str, exclude_id: int = None) -> list:
             (cn, exclude_id or -1),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ─────────────────────────────────────────────────
+# إدارة المستخدمين والصلاحيات
+# ─────────────────────────────────────────────────
+
+ROLES = {'admin': 'مدير النظام', 'editor': 'مدخل بيانات', 'viewer': 'باحث'}
+
+
+def _hash_pw(password: str) -> str:
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+
+def authenticate(username: str, password: str) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE username=? AND password=?",
+            (username.strip(), _hash_pw(password)),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_users() -> list:
+    with _conn() as conn:
+        rows = conn.execute("SELECT id, username, display_name, role, created_at FROM users ORDER BY id").fetchall()
+    return [dict(r) for r in rows]
+
+
+def add_user(username: str, password: str, display_name: str, role: str = 'viewer') -> int | None:
+    if role not in ROLES:
+        return None
+    with _conn() as conn:
+        exists = conn.execute("SELECT 1 FROM users WHERE username=?", (username.strip(),)).fetchone()
+        if exists:
+            return None
+        cur = conn.execute(
+            "INSERT INTO users (username, password, display_name, role) VALUES (?, ?, ?, ?)",
+            (username.strip(), _hash_pw(password), display_name.strip(), role),
+        )
+        return cur.lastrowid
+
+
+def update_password(user_id: int, new_password: str) -> bool:
+    with _conn() as conn:
+        conn.execute("UPDATE users SET password=? WHERE id=?", (_hash_pw(new_password), user_id))
+        return conn.total_changes > 0
+
+
+def update_user_role(user_id: int, new_role: str) -> bool:
+    if new_role not in ROLES:
+        return False
+    with _conn() as conn:
+        conn.execute("UPDATE users SET role=? WHERE id=?", (new_role, user_id))
+        return conn.total_changes > 0
+
+
+def delete_user(user_id: int) -> bool:
+    with _conn() as conn:
+        user = conn.execute("SELECT username FROM users WHERE id=?", (user_id,)).fetchone()
+        if user and user[0] == 'admin':
+            return False
+        conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+        return conn.total_changes > 0
 
 
 def find_duplicate_neighborhood(name: str, region: str) -> dict | None:
