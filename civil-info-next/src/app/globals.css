@@ -754,14 +754,60 @@ select.form-input option:hover {
   }
 }
 
-/* Fix dropdown/select colors */
-select, option, input, textarea {
+/* Fix dropdown/select colors — main content only */
+.main-content select,
+.main-content option,
+.main-content input,
+.main-content textarea,
+.card select,
+.card option,
+.card input,
+.card textarea,
+.filters-bar select,
+.filters-bar input {
   color: #111827 !important;
   background-color: #ffffff !important;
 }
-select:focus, input:focus, textarea:focus {
+.main-content select:focus,
+.main-content input:focus,
+.main-content textarea:focus {
   color: #111827 !important;
   background-color: #ffffff !important;
   border-color: #0b4f6c !important;
 }
-select option { color: #111827 !important; background: #ffffff !important; }
+.main-content select option,
+.card select option,
+.filters-bar select option {
+  color: #111827 !important;
+  background: #ffffff !important;
+}
+.main-content select option:checked,
+.main-content select option:hover {
+  color: #111827 !important;
+  background: #e5e7eb !important;
+}
+
+/* Sidebar select — keep dark theme */
+.sidebar select {
+  color: white !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+.sidebar select option {
+  color: #111827 !important;
+  background: #ffffff !important;
+}
+.sidebar label {
+  color: #ffffff !important;
+}
+
+/* Checkbox labels in forms */
+.main-content label,
+.card label {
+  color: #111827;
+}
+.main-content input[type="checkbox"] + span,
+.main-content input[type="checkbox"] + label,
+.card input[type="checkbox"] + span {
+  color: #111827 !important;
+}
