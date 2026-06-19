@@ -8,7 +8,6 @@ import type {
   Distribution,
   PersonsResponse,
   LoginResponse,
-  Region,
   FamilySearchResult,
 } from "./types";
 
@@ -242,6 +241,7 @@ export async function addMukhtar(
       name: data.name || "",
       phone: data.phone || "",
       neighborhood_ids: data.neighborhood_ids || [],
+      region: data.region || "",
     }),
   });
 }
@@ -256,6 +256,7 @@ export async function updateMukhtar(
       name: data.name || "",
       phone: data.phone || "",
       neighborhood_ids: data.neighborhood_ids || [],
+      region: data.region || "",
     }),
   });
 }
@@ -287,7 +288,8 @@ export async function deleteNeighborhood(
 }
 
 export async function getRegions(): Promise<string[]> {
-  return request<string[]>("/api/regions");
+  const data = await request<Array<{ id: number; name: string }>>("/api/regions");
+  return data.map((r) => r.name);
 }
 
 export async function addRegion(name: string): Promise<{ id: number }> {
