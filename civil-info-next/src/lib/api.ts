@@ -178,7 +178,11 @@ export async function restorePerson(id: number): Promise<{ ok: boolean }> {
 
 // Family
 export async function getPersonFamily(pid: number): Promise<Person[]> {
-  return request<Person[]>(`/api/persons/${pid}/family`);
+  const data = await request<Record<string, unknown>>(`/api/persons/${pid}/family`);
+  if (Array.isArray(data)) return data as Person[];
+  if (Array.isArray(data?.family_members)) return data.family_members as Person[];
+  if (Array.isArray(data?.members)) return data.members as Person[];
+  return [];
 }
 
 export async function createFamily(pid: number): Promise<{ family_id: number }> {

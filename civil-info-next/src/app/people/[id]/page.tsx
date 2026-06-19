@@ -287,7 +287,7 @@ export default function PersonDetailPage() {
                 <div style={{ textAlign: "center", padding: 20 }}>
                   <div className="spinner spinner-dark" />
                 </div>
-              ) : familyMembers.length === 0 ? (
+              ) : !Array.isArray(familyMembers) || familyMembers.length === 0 ? (
                 <div className="empty-state" style={{ padding: 20 }}>
                   <p>لا يوجد أفراد آخرون في الأسرة</p>
                 </div>
