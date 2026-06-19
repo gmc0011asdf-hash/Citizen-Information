@@ -43,8 +43,9 @@ export interface Mukhtar {
   name: string;
   phone: string;
   neighborhood_ids?: number[];
-  neighborhoods?: string[];
+  neighborhood_names?: string[];
   region?: string;
+  created_at?: string;
 }
 
 export interface Neighborhood {

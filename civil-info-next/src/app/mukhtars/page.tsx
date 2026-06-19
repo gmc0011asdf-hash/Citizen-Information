@@ -394,7 +394,7 @@ export default function MukhtarsPage() {
                         </div>
                       ) : (
                         <span style={{ fontSize: 12 }}>
-                          {m.neighborhoods?.join("، ") || "-"}
+                          {m.neighborhood_names?.join("، ") || "-"}
                         </span>
                       )}
                     </td>

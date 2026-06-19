@@ -207,20 +207,44 @@ class MukhtarReq(BaseModel):
     region: str = ""
     neighborhood_ids: list[int] = []
 
+def _norm_mukhtar(r: dict) -> dict:
+    hayas = r.get('الأحياء') or ''
+    regions = r.get('المناطق') or ''
+    nb_names = [s.strip() for s in hayas.split('|') if s.strip()] if hayas else []
+    reg_list = list(dict.fromkeys(s.strip() for s in regions.split('|') if s.strip())) if regions else []
+    return {
+        "id": r["id"],
+        "name": r.get("الاسم") or "",
+        "phone": r.get("الهاتف") or "",
+        "region": reg_list[0] if reg_list else "",
+        "regions": reg_list,
+        "neighborhood_names": nb_names,
+        "created_at": r.get("created_at") or "",
+    }
+
 @app.get("/api/mukhtars")
 def list_mukhtars():
-    return db.get_mukhtars()
+    return [_norm_mukhtar(m) for m in db.get_mukhtars()]
 
 @app.get("/api/mukhtars/grouped")
 def mukhtars_grouped():
-    return db.get_mukhtars_grouped_by_region()
+    grouped = db.get_mukhtars_grouped_by_region()
+    return {region: [_norm_mukhtar(m) for m in mkhs] for region, mkhs in grouped.items()}
 
 @app.get("/api/mukhtars/{mid}")
 def get_mukhtar(mid: int):
     m = db.get_mukhtar(mid)
     if not m:
         raise HTTPException(404)
-    return m
+    nbs = m.get('neighborhoods') or []
+    return {
+        "id": m["id"],
+        "name": m.get("الاسم") or "",
+        "phone": m.get("الهاتف") or "",
+        "created_at": m.get("created_at") or "",
+        "neighborhood_ids": [n["id"] for n in nbs],
+        "neighborhoods": [{"id": n["id"], "name": n.get("الاسم") or "", "region": n.get("المنطقة") or ""} for n in nbs],
+    }
 
 @app.post("/api/mukhtars")
 def create_mukhtar(req: MukhtarReq):
@@ -268,7 +292,8 @@ class NeighborhoodReq(BaseModel):
 
 @app.get("/api/neighborhoods")
 def list_neighborhoods(region: str = ""):
-    return db.get_neighborhoods(region)
+    rows = db.get_neighborhoods(region)
+    return [{"id": r["id"], "name": r.get("الاسم") or "", "region": r.get("المنطقة") or ""} for r in rows]
 
 @app.post("/api/neighborhoods")
 def create_neighborhood(req: NeighborhoodReq):
