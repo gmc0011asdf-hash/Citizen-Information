@@ -1,47 +1,40 @@
-@echo off
+﻿@echo off
 chcp 65001 > nul
-title المعلومات المدنية للمواطنين
-
-echo ============================================================
-echo   المعلومات المدنية للمواطنين - واجهة إدارة البيانات
-echo ============================================================
+title Citizen Information System
+echo.
+echo ============================================
+echo   Citizen Information System
+echo ============================================
 echo.
 
-REM التحقق من وجود Python
-python --version > nul 2>&1
+python --version > /dev/null 2>&1
 if errorlevel 1 (
-    echo [!] Python غير مثبت.
+    echo [ERROR] Python is not installed.
     pause
     exit /b 1
 )
 
-REM التحقق من Streamlit
-python -c "import streamlit" > nul 2>&1
+python -c "import streamlit" > /dev/null 2>&1
 if errorlevel 1 (
-    echo [!] Streamlit غير مثبت. جارٍ التثبيت...
+    echo [*] Installing dependencies...
     python -m pip install -r requirements.txt
     if errorlevel 1 (
-        echo [!] فشل التثبيت.
+        echo [ERROR] Installation failed.
         pause
         exit /b 1
     )
 )
 
-REM ضبط الترميز
 set PYTHONIOENCODING=utf-8
 set PYTHONUTF8=1
 
-echo [*] جارٍ تشغيل الواجهة...
-echo [*] الرابط: http://localhost:8501
-echo [*] اضغط Ctrl+C لإيقاف الواجهة
+echo [*] Starting server...
+echo [*] URL: http://localhost:8501
+echo [*] Press Ctrl+C to stop
 echo.
 
-python -m streamlit run app.py ^
-    --server.port 8501 ^
-    --server.headless false ^
-    --browser.gatherUsageStats false ^
-    --theme.base light
+python -m streamlit run app.py --server.port 8501 --server.headless false --browser.gatherUsageStats false --theme.base light
 
 echo.
-echo [*] تم إيقاف الواجهة.
+echo [*] Server stopped.
 pause
