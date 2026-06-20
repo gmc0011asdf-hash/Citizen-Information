@@ -347,6 +347,44 @@ def find_duplicate_persons(name: str, exclude_id: int = None) -> list:
     return [dict(r) for r in rows]
 
 
+def find_similar_persons(name: str, exclude_id: int = None, limit: int = 10) -> list:
+    """بحث ذكي عن أسماء مشابهة أو جزئية"""
+    from cleaner import clean_arabic_name
+    target = clean_arabic_name(name)
+    if not target or len(target.split()) < 2:
+        return []
+    target_words = target.split()
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT id, الاسم, clean_name, family_id, المنطقة, الحي, الهاتف "
+            "FROM persons WHERE is_deleted=0"
+        ).fetchall()
+    matches = []
+    for row in rows:
+        if exclude_id and row['id'] == exclude_id:
+            continue
+        existing = row['clean_name'] or ''
+        if not existing:
+            continue
+        existing_words = existing.split()
+        is_contained = target in existing or existing in target
+        starts_same = ' '.join(existing_words[:len(target_words)]) == target
+        common = sum(1 for w in target_words if w in existing_words)
+        strong_match = common >= min(3, len(target_words))
+        if is_contained or starts_same or strong_match:
+            matches.append({
+                'id': row['id'],
+                'name': row['الاسم'],
+                'family_id': row['family_id'],
+                'region': row['المنطقة'] or '',
+                'hay': row['الحي'] or '',
+                'phone': row['الهاتف'] or '',
+            })
+            if len(matches) >= limit:
+                break
+    return matches
+
+
 # ─────────────────────────────────────────────────
 # إدارة المستخدمين والصلاحيات
 # ─────────────────────────────────────────────────

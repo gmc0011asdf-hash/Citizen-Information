@@ -23,7 +23,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "خطأ في الاتصال" }));
-    throw new Error(err.detail || `HTTP ${res.status}`);
+    if (res.status === 409 && err.detail?.matches) {
+      const e = new Error(err.detail.message || "تكرار");
+      (e as any).matches = err.detail.matches;
+      (e as any).status = 409;
+      throw e;
+    }
+    throw new Error(typeof err.detail === 'string' ? err.detail : err.detail?.message || `HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -119,12 +125,19 @@ export async function getPersons(params: {
   return request<PersonsResponse>(`/api/persons?${sp.toString()}`);
 }
 
+export async function checkDuplicateName(name: string, excludeId?: number): Promise<{ has_duplicates: boolean; matches: Array<{ id: number; name: string; family_id: number | null; region: string; hay: string; phone: string }> }> {
+  const sp = new URLSearchParams({ name });
+  if (excludeId) sp.set("exclude_id", String(excludeId));
+  return request(`/api/persons/check-duplicate?${sp.toString()}`);
+}
+
 export async function getPerson(id: number): Promise<Person> {
   return request<Person>(`/api/persons/${id}`);
 }
 
 export async function addPerson(
-  data: Partial<Person>
+  data: Partial<Person>,
+  forceSave = false
 ): Promise<{ id: number }> {
   return request("/api/persons", {
     method: "POST",
@@ -142,13 +155,15 @@ export async function addPerson(
       marital_status: data.الحالة_الزوجية || "",
       sila: data.الصلة || "",
       notes: data.الملاحظات || "",
+      force_save: forceSave,
     }),
   });
 }
 
 export async function updatePerson(
   id: number,
-  data: Partial<Person>
+  data: Partial<Person>,
+  forceSave = false
 ): Promise<{ ok: boolean }> {
   return request(`/api/persons/${id}`, {
     method: "PUT",
@@ -166,6 +181,7 @@ export async function updatePerson(
       marital_status: data.الحالة_الزوجية || "",
       sila: data.الصلة || "",
       notes: data.الملاحظات || "",
+      force_save: forceSave,
     }),
   });
 }

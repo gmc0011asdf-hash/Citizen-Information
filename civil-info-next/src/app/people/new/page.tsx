@@ -11,6 +11,7 @@ import {
   getFamilyRelations,
   getHayasForRegion,
 } from "@/lib/api";
+import { can } from "@/lib/auth";
 import type { Person, Mukhtar } from "@/lib/types";
 
 export default function NewPersonPage() {
@@ -23,6 +24,8 @@ export default function NewPersonPage() {
   const [maritalStatuses, setMaritalStatuses] = useState<string[]>([]);
   const [familyRelations, setFamilyRelations] = useState<string[]>([]);
   const [hayas, setHayas] = useState<string[]>([]);
+  const [duplicates, setDuplicates] = useState<any[]>([]);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   useEffect(() => {
     getRegions()
@@ -61,10 +64,24 @@ export default function NewPersonPage() {
     try {
       const res = await addPerson(form);
       router.push(`/people/${res.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "خطأ في الإضافة");
+    } catch (err: any) {
+      if (err.status === 409 && err.matches) {
+        setDuplicates(err.matches);
+        setShowDuplicateModal(true);
+      } else {
+        setError(err instanceof Error ? err.message : "خطأ في الإضافة");
+      }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleForceSave = async () => {
+    try {
+      const res = await addPerson(form, true);
+      router.push(`/people/${res.id}`);
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
@@ -259,6 +276,46 @@ export default function NewPersonPage() {
           </div>
         </form>
       </div>
+      {showDuplicateModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="card" style={{ maxWidth: 600, maxHeight: "80vh", overflow: "auto" }}>
+            <h3 style={{ color: "#dc2626", marginBottom: 16 }}>&#9888;&#65039; يوجد اسم مشابه في النظام</h3>
+            <p style={{ marginBottom: 12 }}>تم العثور على سجلات مشابهة. يرجى المراجعة قبل الحفظ:</p>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>التسلسل</th>
+                  <th>الاسم</th>
+                  <th>رقم الأسرة</th>
+                  <th>المنطقة</th>
+                  <th>الهاتف</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {duplicates.map((d) => (
+                  <tr key={d.id}>
+                    <td>{d.id}</td>
+                    <td style={{ fontWeight: 600 }}>{d.name}</td>
+                    <td>{d.family_id || "—"}</td>
+                    <td>{d.region || "—"}</td>
+                    <td style={{ direction: "ltr", textAlign: "right" }}>{d.phone || "—"}</td>
+                    <td>
+                      <a href={`/people/${d.id}`} className="btn btn-sm btn-outline">فتح السجل</a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-start" }}>
+              <button onClick={() => setShowDuplicateModal(false)} className="btn btn-outline">إلغاء</button>
+              {can("hard_delete") && (
+                <button onClick={handleForceSave} className="btn btn-danger">حفظ رغم التشابه (مدير فقط)</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

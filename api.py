@@ -103,6 +103,12 @@ class PersonReq(BaseModel):
     sila: str = ""
     family_id: Optional[int] = None
     notes: str = ""
+    force_save: bool = False
+
+@app.get("/api/persons/check-duplicate")
+def check_duplicate_name(name: str, exclude_id: Optional[int] = None):
+    matches = db.find_similar_persons(name, exclude_id=exclude_id)
+    return {"has_duplicates": len(matches) > 0, "matches": matches}
 
 @app.get("/api/persons")
 def list_persons(
@@ -132,9 +138,10 @@ def get_person(pid: int):
 
 @app.put("/api/persons/{pid}")
 def update_person(pid: int, req: PersonReq):
-    dups = db.find_duplicate_persons(req.name, exclude_id=pid)
-    if dups:
-        raise HTTPException(400, f"يوجد تكرار في الاسم: التسلسل {dups[0]['id']}")
+    if not req.force_save:
+        similar = db.find_similar_persons(req.name, exclude_id=pid)
+        if similar:
+            raise HTTPException(409, detail={"message": "يوجد اسم مشابه في النظام", "matches": similar})
     ok = db.update_person(
         pid, الاسم=req.name, التولد=req.birth, المهنة=req.job,
         القضاء=req.qadha, العنوان=req.address, المحل=req.mahal,
@@ -148,9 +155,10 @@ def update_person(pid: int, req: PersonReq):
 def add_person(req: PersonReq):
     if not req.name.strip():
         raise HTTPException(400, "الاسم مطلوب")
-    dups = db.find_duplicate_persons(req.name)
-    if dups:
-        raise HTTPException(400, f"يوجد تكرار في الاسم: التسلسل {dups[0]['id']}")
+    if not req.force_save:
+        similar = db.find_similar_persons(req.name)
+        if similar:
+            raise HTTPException(409, detail={"message": "يوجد اسم مشابه في النظام", "matches": similar})
     new_id = db.add_person(
         الاسم=req.name, التولد=req.birth, المهنة=req.job,
         القضاء=req.qadha or req.region, العنوان=req.address,
