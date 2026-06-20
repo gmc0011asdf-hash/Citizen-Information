@@ -363,7 +363,10 @@ export async function getFamilyRelations(): Promise<string[]> {
 }
 
 export async function getRoles(): Promise<string[]> {
-  return request<string[]>("/api/lookup/roles");
+  const data = await request<unknown>("/api/lookup/roles");
+  if (Array.isArray(data)) return data as string[];
+  if (data && typeof data === "object") return Object.keys(data);
+  return ["admin", "editor", "viewer"];
 }
 
 export async function getPermissions(): Promise<Record<string, string[]>> {

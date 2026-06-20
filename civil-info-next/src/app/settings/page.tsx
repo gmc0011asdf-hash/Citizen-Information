@@ -85,7 +85,7 @@ function UsersTab({ currentUser }: { currentUser: User | null }) {
     Promise.all([getUsers(), getRoles()])
       .then(([u, r]) => {
         setUsers(u);
-        setRoles(r);
+        setRoles(Array.isArray(r) ? r : Object.keys(r || {}));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
