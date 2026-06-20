@@ -169,6 +169,7 @@ export default function PersonDetailPage() {
     { label: "الحالة الزوجية", key: "الحالة_الزوجية" },
     { label: "الصلة", key: "الصلة" },
     { label: "المختار", key: "mukhtar_name" },
+    { label: "الملاحظات", key: "الملاحظات" },
   ];
 
   return (
@@ -269,7 +270,22 @@ export default function PersonDetailPage() {
                 marginBottom: 16,
               }}
             >
-              <h3 style={{ margin: 0, color: "var(--navy)" }}>الأسرة</h3>
+              <h3 style={{ margin: 0, color: "var(--navy)" }}>
+                الأسرة
+                {person.family_id && (
+                  <span style={{
+                    marginRight: 10,
+                    fontSize: 14,
+                    background: "#dbeafe",
+                    color: "#1e40af",
+                    padding: "4px 12px",
+                    borderRadius: 12,
+                    fontWeight: 600,
+                  }}>
+                    رقم الأسرة: {person.family_id}
+                  </span>
+                )}
+              </h3>
               {person.family_id && (
                 <button
                   onClick={handleUnlinkFromFamily}

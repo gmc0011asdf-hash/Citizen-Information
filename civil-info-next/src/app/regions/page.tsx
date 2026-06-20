@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
 import {
   getRegions,
+  getRegionsWithIds,
   getNeighborhoods,
   addNeighborhood,
   deleteNeighborhood,
   addRegion,
   deleteRegion,
+  updateRegion,
+  updateNeighborhood,
 } from "@/lib/api";
 import type { Neighborhood } from "@/lib/types";
 
@@ -27,12 +30,22 @@ export default function RegionsPage() {
   const [newRegionName, setNewRegionName] = useState("");
   const [savingRegion, setSavingRegion] = useState(false);
 
+  // Regions with IDs for editing
+  const [regionsWithIds, setRegionsWithIds] = useState<Array<{ id: number; name: string }>>([]);
+
+  // Edit state
+  const [editingRegion, setEditingRegion] = useState<string | null>(null);
+  const [editRegionName, setEditRegionName] = useState("");
+  const [editingNeighborhood, setEditingNeighborhood] = useState<number | null>(null);
+  const [editNeighborhoodName, setEditNeighborhoodName] = useState("");
+
   const fetchData = () => {
     setLoading(true);
-    Promise.all([getRegions(), getNeighborhoods()])
-      .then(([r, n]) => {
+    Promise.all([getRegions(), getNeighborhoods(), getRegionsWithIds()])
+      .then(([r, n, rwi]) => {
         setRegions(r);
         setNeighborhoods(n);
+        setRegionsWithIds(rwi);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -110,16 +123,43 @@ export default function RegionsPage() {
     }
     if (!confirm(`هل أنت متأكد من حذف المنطقة "${regionName}"؟`)) return;
     try {
-      // We need to find the region id - we'll use the index as a workaround
-      // since the API returns strings. We pass the name to delete by index.
-      const idx = regions.indexOf(regionName);
-      if (idx === -1) return;
-      await deleteRegion(idx + 1);
+      const regionObj = regionsWithIds.find((r) => r.name === regionName);
+      if (!regionObj) return;
+      await deleteRegion(regionObj.id);
       if (selectedRegion === regionName) setSelectedRegion("");
       setSuccess("تم حذف المنطقة بنجاح");
       fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "خطأ في حذف المنطقة");
+    }
+  };
+
+  const handleEditRegion = async (regionName: string) => {
+    if (!editRegionName.trim()) return;
+    const regionObj = regionsWithIds.find((r) => r.name === regionName);
+    if (!regionObj) return;
+    try {
+      await updateRegion(regionObj.id, editRegionName);
+      setEditingRegion(null);
+      setEditRegionName("");
+      setSuccess("تم تعديل المنطقة بنجاح");
+      if (selectedRegion === regionName) setSelectedRegion(editRegionName);
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "خطأ في تعديل المنطقة");
+    }
+  };
+
+  const handleEditNeighborhood = async (n: Neighborhood) => {
+    if (!editNeighborhoodName.trim()) return;
+    try {
+      await updateNeighborhood(n.id, editNeighborhoodName, n.region);
+      setEditingNeighborhood(null);
+      setEditNeighborhoodName("");
+      setSuccess("تم تعديل الحي بنجاح");
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "خطأ في تعديل الحي");
     }
   };
 
@@ -179,42 +219,78 @@ export default function RegionsPage() {
                   (n) => n.region === r
                 ).length;
                 return (
-                  <div
-                    key={r}
-                    style={{
-                      display: "flex",
-                      gap: 4,
-                      alignItems: "center",
-                    }}
-                  >
-                    <button
-                      className={`btn ${selectedRegion === r ? "btn-primary" : "btn-outline"}`}
-                      onClick={() => setSelectedRegion(r)}
-                      style={{ flex: 1, justifyContent: "space-between" }}
-                    >
-                      <span>{r}</span>
-                      <span
+                  <div key={r}>
+                    {editingRegion === r ? (
+                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                        <input
+                          className="form-input"
+                          value={editRegionName}
+                          onChange={(e) => setEditRegionName(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleEditRegion(r)}
+                          autoFocus
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          onClick={() => handleEditRegion(r)}
+                          className="btn btn-sm btn-primary"
+                          style={{ padding: "5px 8px", fontSize: 14 }}
+                        >
+                          حفظ
+                        </button>
+                        <button
+                          onClick={() => { setEditingRegion(null); setEditRegionName(""); }}
+                          className="btn btn-sm btn-outline"
+                          style={{ padding: "5px 8px", fontSize: 14 }}
+                        >
+                          إلغاء
+                        </button>
+                      </div>
+                    ) : (
+                      <div
                         style={{
-                          background:
-                            selectedRegion === r
-                              ? "rgba(255,255,255,0.2)"
-                              : "#f1f5f9",
-                          padding: "2px 8px",
-                          borderRadius: 12,
-                          fontSize: 12,
+                          display: "flex",
+                          gap: 4,
+                          alignItems: "center",
                         }}
                       >
-                        {count}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteRegion(r)}
-                      className="btn btn-sm btn-danger"
-                      title="حذف المنطقة"
-                      style={{ padding: "5px 8px", fontSize: 14 }}
-                    >
-                      ✕
-                    </button>
+                        <button
+                          className={`btn ${selectedRegion === r ? "btn-primary" : "btn-outline"}`}
+                          onClick={() => setSelectedRegion(r)}
+                          style={{ flex: 1, justifyContent: "space-between" }}
+                        >
+                          <span>{r}</span>
+                          <span
+                            style={{
+                              background:
+                                selectedRegion === r
+                                  ? "rgba(255,255,255,0.2)"
+                                  : "#f1f5f9",
+                              padding: "2px 8px",
+                              borderRadius: 12,
+                              fontSize: 12,
+                            }}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => { setEditingRegion(r); setEditRegionName(r); }}
+                          className="btn btn-sm btn-outline"
+                          title="تعديل المنطقة"
+                          style={{ padding: "5px 8px", fontSize: 14 }}
+                        >
+                          تعديل
+                        </button>
+                        <button
+                          onClick={() => handleDeleteRegion(r)}
+                          className="btn btn-sm btn-danger"
+                          title="حذف المنطقة"
+                          style={{ padding: "5px 8px", fontSize: 14 }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -299,15 +375,52 @@ export default function RegionsPage() {
                   {filteredNeighborhoods.map((n, i) => (
                     <tr key={n.id}>
                       <td>{i + 1}</td>
-                      <td>{n.name}</td>
+                      <td>
+                        {editingNeighborhood === n.id ? (
+                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                            <input
+                              className="form-input"
+                              value={editNeighborhoodName}
+                              onChange={(e) => setEditNeighborhoodName(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleEditNeighborhood(n)}
+                              autoFocus
+                              style={{ margin: 0 }}
+                            />
+                            <button
+                              onClick={() => handleEditNeighborhood(n)}
+                              className="btn btn-sm btn-primary"
+                            >
+                              حفظ
+                            </button>
+                            <button
+                              onClick={() => { setEditingNeighborhood(null); setEditNeighborhoodName(""); }}
+                              className="btn btn-sm btn-outline"
+                            >
+                              إلغاء
+                            </button>
+                          </div>
+                        ) : (
+                          n.name
+                        )}
+                      </td>
                       <td>{n.region}</td>
                       <td>
-                        <button
-                          onClick={() => handleDeleteNeighborhood(n.id)}
-                          className="btn btn-sm btn-danger"
-                        >
-                          حذف
-                        </button>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {editingNeighborhood !== n.id && (
+                            <button
+                              onClick={() => { setEditingNeighborhood(n.id); setEditNeighborhoodName(n.name); }}
+                              className="btn btn-sm btn-outline"
+                            >
+                              تعديل
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteNeighborhood(n.id)}
+                            className="btn btn-sm btn-danger"
+                          >
+                            حذف
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

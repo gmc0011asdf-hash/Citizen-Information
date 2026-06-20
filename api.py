@@ -102,6 +102,7 @@ class PersonReq(BaseModel):
     marital_status: str = ""
     sila: str = ""
     family_id: Optional[int] = None
+    notes: str = ""
 
 @app.get("/api/persons")
 def list_persons(
@@ -139,7 +140,7 @@ def update_person(pid: int, req: PersonReq):
         القضاء=req.qadha, العنوان=req.address, المحل=req.mahal,
         الهاتف=req.phone, المنطقة=req.region, الحي=req.hay,
         mukhtar_id=req.mukhtar_id, الحالة_الزوجية=req.marital_status,
-        الصلة=req.sila,
+        الصلة=req.sila, الملاحظات=req.notes,
     )
     return {"ok": ok}
 
@@ -156,7 +157,7 @@ def add_person(req: PersonReq):
         المحل=req.mahal, الهاتف=req.phone, الشيت="يدوي",
         المنطقة=req.region, الحي=req.hay, mukhtar_id=req.mukhtar_id,
         الحالة_الزوجية=req.marital_status, الصلة=req.sila,
-        family_id=req.family_id,
+        family_id=req.family_id, الملاحظات=req.notes,
     )
     if req.hay and req.region:
         db.add_neighborhood(req.hay, req.region)
@@ -305,9 +306,22 @@ def create_neighborhood(req: NeighborhoodReq):
         raise HTTPException(400, "فشل الإضافة")
     return {"id": nid}
 
+@app.put("/api/neighborhoods/{nid}")
+def edit_neighborhood(nid: int, req: NeighborhoodReq):
+    return {"ok": db.update_neighborhood(nid, req.name)}
+
 @app.delete("/api/neighborhoods/{nid}")
 def remove_neighborhood(nid: int):
     return {"ok": db.delete_neighborhood(nid)}
+
+class RegionUpdateReq(BaseModel):
+    name: str
+
+@app.put("/api/regions/{region_id}")
+def edit_region(region_id: int, req: RegionUpdateReq):
+    if not db.update_region_name(region_id, req.name):
+        raise HTTPException(400, "فشل التعديل")
+    return {"ok": True}
 
 @app.get("/api/regions")
 def list_regions():
@@ -411,3 +425,7 @@ def family_relations():
 @app.get("/api/lookup/roles")
 def roles():
     return db.ROLES
+
+@app.get("/api/lookup/permissions")
+def permissions():
+    return {role: list(perms) for role, perms in db.PERMISSIONS.items()}

@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { User } from "@/lib/types";
 
-const navItems = [
-  { href: "/people", label: "قائمة الأشخاص", icon: "👥" },
-  { href: "/people/new", label: "إضافة شخص", icon: "➕" },
-  { href: "/statistics", label: "إحصائيات", icon: "📊" },
-  { href: "/mukhtars", label: "المختارون", icon: "🏛️" },
-  { href: "/regions", label: "المناطق والأحياء", icon: "🗺️" },
-  { href: "/deleted", label: "المحذوفات", icon: "🗑️" },
-  { href: "/settings", label: "الإعدادات", icon: "⚙️" },
+const allNavItems = [
+  { href: "/people", label: "قائمة الأشخاص", icon: "👥", roles: ["viewer", "editor", "admin"] },
+  { href: "/people/new", label: "إضافة شخص", icon: "➕", roles: ["editor", "admin"] },
+  { href: "/statistics", label: "إحصائيات", icon: "📊", roles: ["viewer", "editor", "admin"] },
+  { href: "/mukhtars", label: "المختارون", icon: "🏛️", roles: ["editor", "admin"] },
+  { href: "/regions", label: "المناطق والأحياء", icon: "🗺️", roles: ["editor", "admin"] },
+  { href: "/deleted", label: "المحذوفات", icon: "🗑️", roles: ["admin"] },
+  { href: "/settings", label: "الإعدادات", icon: "⚙️", roles: ["admin"] },
 ];
 
 export default function Sidebar() {
@@ -78,22 +78,24 @@ export default function Sidebar() {
       )}
 
       <nav className="sidebar-nav">
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href) && item.href !== "/people/new") ||
-            (item.href === "/people/new" && pathname === "/people/new");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={isActive ? "active" : ""}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-            </Link>
-          );
-        })}
+        {allNavItems
+          .filter((item) => !user || item.roles.includes(user.role))
+          .map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(item.href) && item.href !== "/people/new") ||
+              (item.href === "/people/new" && pathname === "/people/new");
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={isActive ? "active" : ""}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {item.label}
+              </Link>
+            );
+          })}
       </nav>
 
       <div className="sidebar-per-page">

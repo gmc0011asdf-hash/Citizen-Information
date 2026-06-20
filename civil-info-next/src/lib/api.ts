@@ -141,6 +141,7 @@ export async function addPerson(
       mukhtar_id: data.mukhtar_id || null,
       marital_status: data.الحالة_الزوجية || "",
       sila: data.الصلة || "",
+      notes: data.الملاحظات || "",
     }),
   });
 }
@@ -164,6 +165,7 @@ export async function updatePerson(
       mukhtar_id: data.mukhtar_id || null,
       marital_status: data.الحالة_الزوجية || "",
       sila: data.الصلة || "",
+      notes: data.الملاحظات || "",
     }),
   });
 }
@@ -291,9 +293,29 @@ export async function deleteNeighborhood(
   return request(`/api/neighborhoods/${id}`, { method: "DELETE" });
 }
 
+export async function updateNeighborhood(id: number, name: string, region: string): Promise<{ ok: boolean }> {
+  return request(`/api/neighborhoods/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, region }),
+  });
+}
+
 export async function getRegions(): Promise<string[]> {
   const data = await request<Array<{ id: number; name: string }>>("/api/regions");
   return data.map((r) => r.name);
+}
+
+export async function getRegionsWithIds(): Promise<Array<{ id: number; name: string }>> {
+  return request("/api/regions");
+}
+
+export async function updateRegion(id: number, name: string): Promise<{ ok: boolean }> {
+  return request(`/api/regions/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
 }
 
 export async function addRegion(name: string): Promise<{ id: number }> {
@@ -342,6 +364,10 @@ export async function getFamilyRelations(): Promise<string[]> {
 
 export async function getRoles(): Promise<string[]> {
   return request<string[]>("/api/lookup/roles");
+}
+
+export async function getPermissions(): Promise<Record<string, string[]>> {
+  return request("/api/lookup/permissions");
 }
 
 // Export

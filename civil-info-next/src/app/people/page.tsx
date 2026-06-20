@@ -20,8 +20,17 @@ export default function PeoplePage() {
   const [perPage, setPerPage] = useState(50);
   const [regions, setRegions] = useState<string[]>([]);
   const [mukhtars, setMukhtars] = useState<Mukhtar[]>([]);
+  const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const u = JSON.parse(storedUser);
+        setUserRole(u.role || "");
+      } catch { /* ignore */ }
+    }
+
     const storedPerPage = localStorage.getItem("perPage");
     if (storedPerPage) setPerPage(Number(storedPerPage));
 
@@ -187,11 +196,13 @@ export default function PeoplePage() {
             إجمالي النتائج: <strong>{total}</strong>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <Link href="/people/new" className="btn btn-primary">
-              ➕ إضافة شخص
-            </Link>
+            {userRole !== "viewer" && (
+              <Link href="/people/new" className="btn btn-primary">
+                إضافة شخص
+              </Link>
+            )}
             <button onClick={handleExport} className="btn btn-gold">
-              📥 تصدير Excel
+              تصدير Excel
             </button>
           </div>
         </div>
@@ -216,6 +227,7 @@ export default function PeoplePage() {
                   <th>المهنة</th>
                   <th>المنطقة</th>
                   <th>الهاتف</th>
+                  <th>الملاحظات</th>
                   <th>إجراءات</th>
                 </tr>
               </thead>
@@ -276,6 +288,13 @@ export default function PeoplePage() {
                     <td>{p.المنطقة || "-"}</td>
                     <td style={{ direction: "ltr", textAlign: "right" }}>
                       {p.الهاتف || "-"}
+                    </td>
+                    <td>
+                      {p.الملاحظات
+                        ? p.الملاحظات.length > 30
+                          ? p.الملاحظات.substring(0, 30) + "..."
+                          : p.الملاحظات
+                        : "-"}
                     </td>
                     <td>
                       <Link

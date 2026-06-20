@@ -229,6 +229,16 @@ export default function NewPersonPage() {
                 ))}
               </select>
             </div>
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label>الملاحظات</label>
+              <textarea
+                className="form-input"
+                rows={3}
+                placeholder="ملاحظات إضافية..."
+                value={form.الملاحظات || ""}
+                onChange={(e) => setForm({ ...form, الملاحظات: e.target.value })}
+              />
+            </div>
           </div>
 
           <div style={{ marginTop: 24, display: "flex", gap: 12 }}>

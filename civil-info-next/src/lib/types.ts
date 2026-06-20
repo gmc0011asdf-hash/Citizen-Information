@@ -15,6 +15,7 @@ export interface Person {
   الشيت: string;
   deleted: number;
   family_id: number | null;
+  الملاحظات?: string;
   mukhtar_name?: string;
   matched_by_search?: boolean;
   included_as_family?: boolean;
