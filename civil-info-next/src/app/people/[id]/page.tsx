@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
+import { can } from "@/lib/auth";
 import {
   getPerson,
   deletePerson,
@@ -81,7 +82,7 @@ export default function PersonDetailPage() {
     setActionLoading(true);
     try {
       await restorePerson(id);
-      setPerson((prev) => (prev ? { ...prev, deleted: 0 } : prev));
+      setPerson((prev) => (prev ? { ...prev, is_deleted: 0 } : prev));
     } catch (err) {
       setError(err instanceof Error ? err.message : "خطأ في الاستعادة");
     } finally {
@@ -202,34 +203,40 @@ export default function PersonDetailPage() {
                   {person.الاسم}
                 </h2>
                 <span
-                  className={`badge ${person.deleted ? "badge-deleted" : "badge-active"}`}
+                  className={`badge ${person.is_deleted ? "badge-deleted" : "badge-active"}`}
                 >
-                  {person.deleted ? "محذوف" : "نشط"}
+                  {person.is_deleted ? "محذوف" : "نشط"}
                 </span>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <Link
-                  href={`/people/${id}/edit`}
-                  className="btn btn-primary"
-                >
-                  تعديل
-                </Link>
-                {person.deleted ? (
-                  <button
-                    onClick={handleRestore}
-                    className="btn btn-success"
-                    disabled={actionLoading}
+                {can("edit") && (
+                  <Link
+                    href={`/people/${id}/edit`}
+                    className="btn btn-primary"
                   >
-                    استعادة
-                  </button>
+                    تعديل
+                  </Link>
+                )}
+                {person.is_deleted ? (
+                  can("restore") && (
+                    <button
+                      onClick={handleRestore}
+                      className="btn btn-success"
+                      disabled={actionLoading}
+                    >
+                      استعادة
+                    </button>
+                  )
                 ) : (
-                  <button
-                    onClick={handleDelete}
-                    className="btn btn-danger"
-                    disabled={actionLoading}
-                  >
-                    حذف
-                  </button>
+                  can("delete") && (
+                    <button
+                      onClick={handleDelete}
+                      className="btn btn-danger"
+                      disabled={actionLoading}
+                    >
+                      حذف
+                    </button>
+                  )
                 )}
               </div>
             </div>

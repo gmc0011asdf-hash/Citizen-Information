@@ -256,7 +256,7 @@ def get_persons(search='', region='', haya='', mihna='', mukhtar_id=None,
             f"""SELECT p.id, p.الاسم, p.التولد, p.المهنة, p.القضاء, p.العنوان,
                        p.المحل, p.الهاتف, p.الشيت, p.الصف, p.is_deleted,
                        p.المنطقة, p.الحي, p.mukhtar_id,
-                       p.الحالة_الزوجية, p.الصلة, p.family_id,
+                       p.الحالة_الزوجية, p.الصلة, p.family_id, p.الملاحظات,
                        m.الاسم AS mukhtar_name,
                        p.created_at, p.updated_at
                 FROM persons p
@@ -276,7 +276,7 @@ def get_persons(search='', region='', haya='', mihna='', mukhtar_id=None,
                     f"""SELECT p.id, p.الاسم, p.التولد, p.المهنة, p.القضاء, p.العنوان,
                                p.المحل, p.الهاتف, p.الشيت, p.الصف, p.is_deleted,
                                p.المنطقة, p.الحي, p.mukhtar_id,
-                               p.الحالة_الزوجية, p.الصلة, p.family_id,
+                               p.الحالة_الزوجية, p.الصلة, p.family_id, p.الملاحظات,
                                m.الاسم AS mukhtar_name,
                                p.created_at, p.updated_at
                         FROM persons p

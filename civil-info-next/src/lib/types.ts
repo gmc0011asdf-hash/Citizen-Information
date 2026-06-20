@@ -13,7 +13,7 @@ export interface Person {
   الحالة_الزوجية: string;
   الصلة: string;
   الشيت: string;
-  deleted: number;
+  is_deleted: number;
   family_id: number | null;
   الملاحظات?: string;
   mukhtar_name?: string;

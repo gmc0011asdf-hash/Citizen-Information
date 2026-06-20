@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
+import { can } from "@/lib/auth";
 import { getPersons, getRegions, getMukhtars, getExportUrl } from "@/lib/api";
 import type { Person, Mukhtar } from "@/lib/types";
 
@@ -196,7 +197,7 @@ export default function PeoplePage() {
             إجمالي النتائج: <strong>{total}</strong>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            {userRole !== "viewer" && (
+            {can("create") && (
               <Link href="/people/new" className="btn btn-primary">
                 إضافة شخص
               </Link>
@@ -224,6 +225,7 @@ export default function PeoplePage() {
                   <th>#</th>
                   <th>الاسم</th>
                   <th>الحالة</th>
+                  <th>رقم الأسرة</th>
                   <th>المهنة</th>
                   <th>المنطقة</th>
                   <th>الهاتف</th>
@@ -279,10 +281,20 @@ export default function PeoplePage() {
                     </td>
                     <td>
                       <span
-                        className={`badge ${p.deleted ? "badge-deleted" : "badge-active"}`}
+                        className={`badge ${p.is_deleted ? "badge-deleted" : "badge-active"}`}
                       >
-                        {p.deleted ? "محذوف" : "نشط"}
+                        {p.is_deleted ? "محذوف" : "نشط"}
                       </span>
+                    </td>
+                    <td>
+                      {p.family_id ? (
+                        <span style={{
+                          background: "#dbeafe", color: "#1e40af", padding: "2px 10px",
+                          borderRadius: 12, fontWeight: 700, fontSize: 12,
+                        }}>
+                          {p.family_id}
+                        </span>
+                      ) : "—"}
                     </td>
                     <td>{p.المهنة || "-"}</td>
                     <td>{p.المنطقة || "-"}</td>
@@ -303,6 +315,11 @@ export default function PeoplePage() {
                       >
                         عرض
                       </Link>
+                      {can("edit") && (
+                        <Link href={`/people/${p.id}/edit`} className="btn btn-sm btn-primary" style={{ marginRight: 4 }}>
+                          تعديل
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))}

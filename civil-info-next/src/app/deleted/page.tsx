@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
+import { can } from "@/lib/auth";
 import { getPersons, restorePerson, permanentDeletePerson } from "@/lib/api";
 import type { Person } from "@/lib/types";
 
@@ -148,18 +149,22 @@ export default function DeletedPage() {
                     </td>
                     <td>
                       <div style={{ display: "flex", gap: 4 }}>
-                        <button
-                          onClick={() => handleRestore(p.id)}
-                          className="btn btn-sm btn-success"
-                        >
-                          استعادة
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(p)}
-                          className="btn btn-sm btn-danger"
-                        >
-                          حذف نهائي
-                        </button>
+                        {can("restore") && (
+                          <button
+                            onClick={() => handleRestore(p.id)}
+                            className="btn btn-sm btn-success"
+                          >
+                            استعادة
+                          </button>
+                        )}
+                        {can("hard_delete") && (
+                          <button
+                            onClick={() => setDeleteTarget(p)}
+                            className="btn btn-sm btn-danger"
+                          >
+                            حذف نهائي
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
