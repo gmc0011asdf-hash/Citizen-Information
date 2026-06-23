@@ -10,10 +10,10 @@ import {
   getMukhtars,
   getMaritalStatuses,
   getFamilyRelations,
-  getHayasForRegion,
+  getNeighborhoods,
 } from "@/lib/api";
 import { can } from "@/lib/auth";
-import type { Person, Mukhtar } from "@/lib/types";
+import type { Person, Mukhtar, Neighborhood } from "@/lib/types";
 
 export default function EditPersonPage() {
   const params = useParams();
@@ -28,7 +28,7 @@ export default function EditPersonPage() {
   const [mukhtars, setMukhtars] = useState<Mukhtar[]>([]);
   const [maritalStatuses, setMaritalStatuses] = useState<string[]>([]);
   const [familyRelations, setFamilyRelations] = useState<string[]>([]);
-  const [hayas, setHayas] = useState<string[]>([]);
+  const [hayas, setHayas] = useState<Neighborhood[]>([]);
   const [duplicates, setDuplicates] = useState<any[]>([]);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
@@ -47,7 +47,7 @@ export default function EditPersonPage() {
         setMaritalStatuses(ms);
         setFamilyRelations(fr);
         if (person.المنطقة) {
-          getHayasForRegion(person.المنطقة)
+          getNeighborhoods(person.المنطقة)
             .then(setHayas)
             .catch(() => {});
         }
@@ -57,15 +57,19 @@ export default function EditPersonPage() {
   }, [id]);
 
   const handleRegionChange = (val: string) => {
-    setForm((prev) => ({ ...prev, المنطقة: val, الحي: "" }));
+    setForm((prev) => ({ ...prev, المنطقة: val, الحي: "", mukhtar_id: null }));
     if (val) {
-      getHayasForRegion(val)
+      getNeighborhoods(val)
         .then(setHayas)
         .catch(() => setHayas([]));
     } else {
       setHayas([]);
     }
   };
+
+  const filteredMukhtars = form.المنطقة
+    ? mukhtars.filter((m) => m.region === form.المنطقة || !m.region)
+    : mukhtars;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,14 +157,6 @@ export default function EditPersonPage() {
                 />
               </div>
               <div className="form-group">
-                <label>القضاء</label>
-                <input
-                  className="form-input"
-                  value={form.القضاء || ""}
-                  onChange={(e) => updateField("القضاء", e.target.value)}
-                />
-              </div>
-              <div className="form-group">
                 <label>العنوان</label>
                 <input
                   className="form-input"
@@ -205,11 +201,12 @@ export default function EditPersonPage() {
                   className="form-input"
                   value={form.الحي || ""}
                   onChange={(e) => updateField("الحي", e.target.value)}
+                  disabled={!form.المنطقة}
                 >
-                  <option value="">اختر الحي</option>
+                  <option value="">{form.المنطقة ? "اختر الحي" : "اختر المنطقة أولاً"}</option>
                   {hayas.map((h) => (
-                    <option key={h} value={h}>
-                      {h}
+                    <option key={h.id} value={h.name}>
+                      {h.name}
                     </option>
                   ))}
                 </select>
@@ -227,7 +224,7 @@ export default function EditPersonPage() {
                   }
                 >
                   <option value="">بدون مختار</option>
-                  {mukhtars.map((m) => (
+                  {filteredMukhtars.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name}
                     </option>
