@@ -9,7 +9,6 @@ echo       Civil Information System - Starting...
 echo  ============================================================
 echo.
 
-:: Check Python
 python --version >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo  [ERROR] Python not found. Run install.bat first.
@@ -17,7 +16,6 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-:: Check Node
 node --version >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo  [ERROR] Node.js not found. Run install.bat first.
@@ -25,33 +23,18 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-:: Check node_modules
-if not exist "%~dp0frontend\node_modules" (
-    echo  [ERROR] Frontend not installed. Run install.bat first.
-    pause
-    exit /b 1
-)
-
-:: Start Backend
 echo  [1/2] Starting Backend API (port 8000)...
-start "Civil Info - API" cmd /c "cd /d %~dp0backend && python -m uvicorn api:app --host 127.0.0.1 --port 8000"
+start "Civil Info - API" cmd /k "cd /d %~dp0backend && python -m uvicorn api:app --host 127.0.0.1 --port 8000"
 
-echo        Waiting for API to start...
+echo        Waiting for API...
 timeout /t 4 /nobreak >nul
 
-:: Start Frontend (production if built, dev otherwise)
-if exist "%~dp0frontend\.next" (
-    echo  [2/2] Starting Frontend - Production (port 3000)...
-    start "Civil Info - Frontend" cmd /c "cd /d %~dp0frontend && npm start"
-) else (
-    echo  [2/2] Starting Frontend - Development (port 3000)...
-    start "Civil Info - Frontend" cmd /c "cd /d %~dp0frontend && npm run dev"
-)
+echo  [2/2] Starting Frontend (port 3000)...
+start "Civil Info - Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
 
-echo        Waiting for Frontend to start...
+echo        Waiting for Frontend...
 timeout /t 6 /nobreak >nul
 
-:: Open browser
 start http://localhost:3000
 
 echo.
